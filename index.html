@@ -74,6 +74,27 @@
             background: white; margin: 40% auto; padding: 30px; width: 85%; max-width: 320px; 
             border-radius: 16px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.2);
         }
+		/* Styling für den Ladekreis */
+		.spinner-container {
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			justify-content: center;
+			margin-top: 50px;
+		}
+		.spinner {
+			width: 60px;
+			height: 60px;
+			border: 6px solid #E5E7EB; /* Heller, grauer Hintergrundring */
+			border-top: 6px solid #38BDF8; /* Hellblauer rotierender Teil */
+			border-radius: 50%;
+			animation: spin 1s linear infinite;
+			margin-bottom: 15px;
+		}
+		@keyframes spin {
+			0% { transform: rotate(0deg); }
+			100% { transform: rotate(360deg); }
+}
     </style>
 </head>
 <body>
@@ -81,7 +102,10 @@
     
     <!-- ANSICHT 1: LERNEN -->
     <div id="viewLernen">
-        <div id="loadingMsg" style="margin-top: 50px; font-size: 18px; color: var(--text-muted);">Verbinde mit Tabelle...</div>
+        <div id="loadingMsg" class="spinner-container">
+    <div class="spinner"></div>
+    <div style="font-size: 16px; color: var(--text-muted);">Lade Vokabeln aus der Cloud...</div>
+</div>
         
         <div class="card" id="trainerApp" style="display: none;">
             <div id="furigana"></div>

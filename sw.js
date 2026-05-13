@@ -1,4 +1,4 @@
-const CACHE_NAME = 'japanisch-trainer-v1';
+const CACHE_NAME = 'japanisch-trainer-v2'; // Erhöhen Sie diese Nummer (v2, v3, etc.) bei jedem großen Update!
 const urlsToCache = [
   './',
   './index.html',
@@ -8,9 +8,26 @@ const urlsToCache = [
 ];
 
 self.addEventListener('install', event => {
+  // skipWaiting sorgt für sofortiges Update
+  self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => cache.addAll(urlsToCache))
+  );
+});
+
+self.addEventListener('activate', event => {
+  // Alte Caches löschen, wenn eine neue Version da ist
+  event.waitUntil(
+    caches.keys().then(cacheNames => {
+      return Promise.all(
+        cacheNames.map(cache => {
+          if (cache !== CACHE_NAME) {
+            return caches.delete(cache);
+          }
+        })
+      );
+    })
   );
 });
 
