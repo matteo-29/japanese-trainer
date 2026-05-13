@@ -241,5 +241,72 @@ document.getElementById('translation').addEventListener('keypress', function(eve
         document.getElementById('btnCheck').click();
     }
 });
+// --- NEUE FUNKTIONEN: TAB-NAVIGATION ---
+document.getElementById('navLernen').addEventListener('click', () => {
+    document.getElementById('viewLernen').style.display = 'block';
+    document.getElementById('viewAdd').style.display = 'none';
+    document.getElementById('navLernen').classList.add('active');
+    document.getElementById('navAdd').classList.remove('active');
+});
 
+document.getElementById('navAdd').addEventListener('click', () => {
+    document.getElementById('viewLernen').style.display = 'none';
+    document.getElementById('viewAdd').style.display = 'block';
+    document.getElementById('navAdd').classList.add('active');
+    document.getElementById('navLernen').classList.remove('active');
+});
+
+// --- NEUE FUNKTION: WORT HINZUFÜGEN ---
+document.getElementById('btnSubmitWord').addEventListener('click', function() {
+    let kanji = document.getElementById('addKanji').value.trim();
+    let furigana = document.getElementById('addFurigana').value.trim();
+    let deutsch = document.getElementById('addDeutsch').value.trim();
+
+    // Validierung: Es muss Deutsch und mindestens Kanji ODER Furigana geben
+    if (!deutsch || (!kanji && !furigana)) {
+        document.getElementById('addFeedback').innerText = "Bitte füllen Sie die Bedeutung und mindestens Kanji oder Kana aus!";
+        document.getElementById('addFeedback').style.color = "red";
+        return;
+    }
+
+    let btn = document.getElementById('btnSubmitWord');
+    btn.innerText = "Speichere in der Cloud...";
+    btn.disabled = true;
+
+    let payload = {
+        action: "addWord",
+        kanji: kanji,
+        furigana: furigana,
+        deutsch: deutsch
+    };
+
+    fetch(SCRIPT_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(payload)
+    }).then(() => {
+        // Erfolg
+        document.getElementById('addFeedback').innerText = "Wort erfolgreich hinzugefügt!";
+        document.getElementById('addFeedback').style.color = "green";
+        
+        // Formular leeren
+        document.getElementById('addKanji').value = "";
+        document.getElementById('addFurigana').value = "";
+        document.getElementById('addDeutsch').value = "";
+        
+        // Die Tabelle im Hintergrund neu laden, damit das neue Wort sofort fällig wird!
+        setTimeout(() => {
+            document.getElementById('addFeedback').innerText = "";
+            loadVocabulary(); 
+        }, 2000);
+        
+    }).catch(err => {
+        document.getElementById('addFeedback').innerText = "Fehler beim Speichern!";
+        document.getElementById('addFeedback').style.color = "red";
+    }).finally(() => {
+        btn.innerText = "Zur Liste hinzufügen";
+        btn.disabled = false;
+    });
+});
 loadVocabulary();

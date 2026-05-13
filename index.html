@@ -2,101 +2,134 @@
 <html lang="de">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Japanisch Vokabeltrainer</title>
-	<link rel="manifest" href="manifest.json">
-<script>
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('sw.js');
-    });
-  }
-</script>
+    <link rel="manifest" href="manifest.json">
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => navigator.serviceWorker.register('sw.js'));
+      }
+    </script>
     <style>
+        :root {
+            --primary: #4F46E5;
+            --primary-hover: #4338CA;
+            --bg: #F3F4F6;
+            --surface: #FFFFFF;
+            --text-main: #1F2937;
+            --text-muted: #6B7280;
+            --success: #10B981;
+            --danger: #EF4444;
+        }
         body { 
-            font-family: 'MS UI Gothic', sans-serif; 
-            text-align: center; 
-            padding: 20px; 
-            background-color: #f4f4f9; 
-            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
+            background-color: var(--bg); color: var(--text-main);
+            margin: 0; padding: 0 0 70px 0; text-align: center;
+        }
+        header {
+            background: var(--primary); color: white; padding: 15px 0; font-size: 20px; font-weight: bold;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px;
         }
         .card { 
-            background: white; 
-            border-radius: 12px; 
-            box-shadow: 0 4px 10px rgba(0,0,0,0.1); 
-            padding: 30px; 
-            max-width: 400px; 
-            margin: 20px auto; 
-            display: none; /* Wird durch JS eingeblendet, sobald Daten geladen sind */
+            background: var(--surface); border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); 
+            padding: 30px 20px; max-width: 90%; margin: 0 auto 20px auto; 
         }
-        #furigana { font-size: 18px; color: #888; min-height: 24px; margin-bottom: 5px; }
-        #kanji { font-size: 40px; font-weight: bold; margin-bottom: 25px; }
+        #furigana { font-size: 16px; color: var(--text-muted); min-height: 24px; margin-bottom: 5px; }
+        #kanji { font-size: 42px; font-weight: bold; margin-bottom: 25px; color: var(--text-main); }
         
         input[type="text"] { 
-            width: 100%; 
-            padding: 12px; 
-            margin-bottom: 20px; 
-            font-size: 16px; 
-            box-sizing: border-box; 
-            border: 1px solid #ccc; 
-            border-radius: 6px; 
+            width: 100%; padding: 14px; margin-bottom: 15px; font-size: 16px; 
+            border: 1px solid #D1D5DB; border-radius: 10px; box-sizing: border-box;
+            background: #F9FAFB; transition: border 0.2s;
         }
+        input[type="text"]:focus { outline: none; border-color: var(--primary); background: #FFF; }
         
         button { 
-            padding: 10px 15px; 
-            margin: 5px; 
-            font-size: 14px; 
-            cursor: pointer; 
-            border: none; 
-            border-radius: 6px; 
-            background-color: #007BFF; 
-            color: white; 
-            font-weight: bold;
+            padding: 12px 20px; margin: 5px; font-size: 15px; border: none; border-radius: 10px; 
+            font-weight: 600; cursor: pointer; transition: transform 0.1s, opacity 0.2s;
         }
-        button:hover { background-color: #0056b3; }
+        button:active { transform: scale(0.96); }
         
-        /* Spezifische Button-Farben */
-        #btnCancel { background-color: #6c757d; }
-        #btnCancel:hover { background-color: #5a6268; }
-        #btnFurigana { background-color: #17a2b8; }
-        #btnGewusst { background-color: #28a745; display: none; }
-        #btnNichtGewusst { background-color: #dc3545; display: none; }
+        .btn-primary { background-color: var(--primary); color: white; width: 100%; }
+        .btn-secondary { background-color: #E5E7EB; color: var(--text-main); }
+        .btn-success { background-color: var(--success); color: white; width: 45%; }
+        .btn-danger { background-color: var(--danger); color: white; width: 45%; }
         
-        #feedback { font-weight: bold; margin-top: 15px; min-height: 20px; font-size: 16px;}
-        #loadingMsg { font-size: 20px; margin-top: 50px; }
+        /* Bottom Navigation */
+        .bottom-nav {
+            position: fixed; bottom: 0; left: 0; width: 100%; background: var(--surface);
+            display: flex; border-top: 1px solid #E5E7EB; padding-bottom: env(safe-area-inset-bottom);
+        }
+        .nav-item {
+            flex: 1; padding: 15px 0; font-size: 14px; font-weight: bold; color: var(--text-muted);
+            background: none; border: none; cursor: pointer; border-radius: 0; margin: 0;
+        }
+        .nav-item.active { color: var(--primary); border-top: 3px solid var(--primary); padding-top: 12px; }
+        
+        #modalAuswertung {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+            background: rgba(0,0,0,0.5); backdrop-filter: blur(3px); z-index: 1000;
+        }
+        .modal-content {
+            background: white; margin: 40% auto; padding: 30px; width: 85%; max-width: 320px; 
+            border-radius: 16px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        }
     </style>
 </head>
 <body>
-    <h2>Vokabeltrainer</h2>
+    <header>日本語 Trainer</header>
     
-    <div id="loadingMsg">Lade Daten aus der Cloud...</div>
-    
-    <div class="card" id="trainerApp">
-        <div id="furigana"></div>
-        <div id="kanji"></div>
+    <!-- ANSICHT 1: LERNEN -->
+    <div id="viewLernen">
+        <div id="loadingMsg" style="margin-top: 50px; font-size: 18px; color: var(--text-muted);">Verbinde mit Tabelle...</div>
         
-        <input type="text" id="translation" placeholder="Deutsche Übersetzung...">
-        
-        <div>
-            <button id="btnCancel">キャンセル (Überspringen)</button>
-            <button id="btnFurigana">ふりがな</button>
-            <button id="btnCheck">Check</button>
+        <div class="card" id="trainerApp" style="display: none;">
+            <div id="furigana"></div>
+            <div id="kanji"></div>
             
-            <button id="btnGewusst">Gewusst</button>
-            <button id="btnNichtGewusst">Nicht gewusst</button>
-        </div>
-        <p id="feedback"></p>
-    </div>
-        <!-- Modal für JA->DE Auswertung (versteckt) -->
-    <div id="modalAuswertung" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 1000;">
-        <div style="background: white; margin: 20% auto; padding: 30px; width: 80%; max-width: 300px; border-radius: 10px; text-align: center;">
-            <p>正解は (Die Lösung ist):</p>
-            <h3 id="modalLoesung" style="margin-bottom: 20px;"></h3>
-            <p>Gewusst?</p>
-            <button id="btnModalGewusst" style="background-color: #28a745; width: 45%;">はい (Richtig)</button>
-            <button id="btnModalFalsch" style="background-color: #dc3545; width: 45%;">いいえ (Falsch)</button>
+            <input type="text" id="translation" placeholder="Antwort eingeben..." autocomplete="off">
+            <p id="feedback" style="font-weight: bold; min-height: 20px; margin-top: 5px;"></p>
+            
+            <div style="display: flex; gap: 10px; margin-top: 15px;">
+                <button class="btn-secondary" id="btnCancel" style="flex: 1;">Überspringen</button>
+                <button class="btn-secondary" id="btnFurigana" style="flex: 1; display: none;">Furigana</button>
+            </div>
+            <button class="btn-primary" id="btnCheck" style="margin-top: 10px;">Prüfen</button>
         </div>
     </div>
+
+    <!-- ANSICHT 2: WORT HINZUFÜGEN -->
+    <div id="viewAdd" style="display: none;">
+        <div class="card">
+            <h2 style="margin-top: 0; color: var(--primary);">Neues Wort</h2>
+            <input type="text" id="addKanji" placeholder="Kanji (z.B. 猫)" autocomplete="off">
+            <input type="text" id="addFurigana" placeholder="Kana/Furigana (z.B. ねこ)" autocomplete="off">
+            <input type="text" id="addDeutsch" placeholder="Bedeutung (z.B. Katze)" autocomplete="off">
+            
+            <button class="btn-primary" id="btnSubmitWord" style="margin-top: 10px;">Zur Liste hinzufügen</button>
+            <p id="addFeedback" style="font-weight: bold; margin-top: 15px;"></p>
+        </div>
+    </div>
+
+    <!-- MODAL FÜR JA->DE -->
+    <div id="modalAuswertung">
+        <div class="modal-content">
+            <p style="color: var(--text-muted); margin: 0;">Die Lösung ist:</p>
+            <h2 id="modalLoesung" style="font-size: 32px; margin: 15px 0;"></h2>
+            <p style="margin-bottom: 20px; font-weight: bold;">Gewusst?</p>
+            <div style="display: flex; justify-content: space-between;">
+                <button class="btn-success" id="btnModalGewusst">Richtig</button>
+                <button class="btn-danger" id="btnModalFalsch">Falsch</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- NAVIGATION UNTEN -->
+    <nav class="bottom-nav">
+        <button class="nav-item active" id="navLernen">🎓 Lernen</button>
+        <button class="nav-item" id="navAdd">➕ Hinzufügen</button>
+    </nav>
+
     <script src="app.js"></script>
 </body>
 </html>
