@@ -94,7 +94,14 @@
 		@keyframes spin {
 			0% { transform: rotate(0deg); }
 			100% { transform: rotate(360deg); }
-}
+		}
+		.modal-loesung {
+			font-size: clamp(18px, 6vw, 32px);
+			margin: 15px 0;
+			line-height: 1.2;
+			word-break: break-word;
+			overflow-wrap: break-word;
+		}
     </style>
 </head>
 <body>
@@ -139,7 +146,7 @@
     <div id="modalAuswertung">
         <div class="modal-content">
             <p style="color: var(--text-muted); margin: 0;">Die Lösung ist:</p>
-            <h2 id="modalLoesung" style="font-size: 32px; margin: 15px 0;"></h2>
+            <h2 id="modalLoesung" class="modal-loesung"></h2>
             <p style="margin-bottom: 20px; font-weight: bold;">Gewusst?</p>
             <div style="display: flex; justify-content: space-between;">
                 <button class="btn-success" id="btnModalGewusst">Richtig</button>
