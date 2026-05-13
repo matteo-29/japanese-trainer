@@ -1,5 +1,5 @@
 // HIER IHRE GOOGLE APPS SCRIPT WEB-APP-URL EINFÜGEN!
-const SCRIPT_URL = 'https://script.google.com/macros/library/d/1k5XGVpkApU0rDstgO0ZmaXyW1gisaBQPHvyvmGc1OoUvhW9F5HJTFjDf/3';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbweRvIaqV1cRumvWSeHErTdjMREcCr1s53AUX5ZcSfpPqF9yr67NRjTrB7qYdrHygipuQ/exec';
 
 let vocabulary = [];
 let currentIndex = 0;
