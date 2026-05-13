@@ -85,8 +85,8 @@
 		.spinner {
 			width: 60px;
 			height: 60px;
-			border: 6px solid #E5E7EB; /* Heller, grauer Hintergrundring */
-			border-top: 6px solid #38BDF8; /* Hellblauer rotierender Teil */
+			border: 6px solid #E5E7EB;
+			border-top: 6px solid #38BDF8;
 			border-radius: 50%;
 			animation: spin 1s linear infinite;
 			margin-bottom: 15px;
@@ -102,6 +102,43 @@
 			word-break: break-word;
 			overflow-wrap: break-word;
 		}
+
+        .daily-progress {
+            margin-top: 18px;
+            width: 100%;
+        }
+
+        .daily-progress-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 14px;
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 8px;
+        }
+
+        .daily-progress-bar {
+            width: 100%;
+            height: 14px;
+            background: #e5e7eb;
+            border-radius: 999px;
+            overflow: hidden;
+            box-shadow: inset 0 1px 2px rgba(0,0,0,0.08);
+        }
+
+        .daily-progress-fill {
+            width: 0%;
+            height: 100%;
+            background: linear-gradient(90deg, #60a5fa, #2563eb);
+            border-radius: 999px;
+            transition: width 0.3s ease;
+        }
+
+        .daily-progress-text {
+            min-width: 44px;
+            text-align: right;
+        }
     </style>
 </head>
 <body>
@@ -110,9 +147,9 @@
     <!-- ANSICHT 1: LERNEN -->
     <div id="viewLernen">
         <div id="loadingMsg" class="spinner-container">
-    <div class="spinner"></div>
-    <div style="font-size: 16px; color: var(--text-muted);">Lade Vokabeln aus der Cloud...</div>
-</div>
+            <div class="spinner"></div>
+            <div style="font-size: 16px; color: var(--text-muted);">Lade Vokabeln aus der Cloud...</div>
+        </div>
         
         <div class="card" id="trainerApp" style="display: none;">
             <div id="furigana"></div>
@@ -126,6 +163,16 @@
                 <button class="btn-secondary" id="btnFurigana" style="flex: 1; display: none;">Furigana</button>
             </div>
             <button class="btn-primary" id="btnCheck" style="margin-top: 10px;">Prüfen</button>
+
+            <div class="daily-progress">
+                <div class="daily-progress-top">
+                    <span>Heutiger Fortschritt</span>
+                    <span id="dailyProgressText" class="daily-progress-text">0%</span>
+                </div>
+                <div class="daily-progress-bar">
+                    <div id="dailyProgressFill" class="daily-progress-fill"></div>
+                </div>
+            </div>
         </div>
     </div>
 
