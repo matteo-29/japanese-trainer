@@ -127,18 +127,34 @@ document.getElementById('btnCheck').addEventListener('click', function() {
         document.getElementById('modalAuswertung').style.display = 'block';
     } else {
         // DE -> JA Prüfen
+        
+        // --- NEU: Wenn der Button aktuell "Weiter" heißt, lade die nächste Vokabel ---
+        if (this.innerText === "Weiter") {
+            this.innerText = "Prüfen"; // Button zurücksetzen
+            document.getElementById('translation').disabled = false; // Texteingabe wieder erlauben
+            verarbeiteAntwort(false); // Fehler speichern und nächste Vokabel laden
+            return; // Funktion hier beenden
+        }
+        
         let eingabe = document.getElementById('translation').value.trim();
         if (eingabe === "") return;
         
         let vok = faelligeAufgaben[vokabelIndex].data;
         if (eingabe === loesung || eingabe === vok['Furigana']) {
+            // Richtig
             document.getElementById('feedback').innerText = "Richtig!";
             document.getElementById('feedback').style.color = "green";
             setTimeout(() => verarbeiteAntwort(true), 1000);
         } else {
+            // Falsch
             document.getElementById('feedback').innerText = `Falsch! Richtig ist:\n${vok['Furigana']}\n${loesung}`;
             document.getElementById('feedback').style.color = "red";
-            setTimeout(() => verarbeiteAntwort(false), 3000);
+            
+            // --- NEU: Texteingabe sperren und Button auf "Weiter" ändern ---
+            document.getElementById('translation').disabled = true;
+            this.innerText = "Weiter";
+            
+            // (Das alte setTimeout(..., 3000) haben wir hier entfernt)
         }
     }
 });
