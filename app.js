@@ -230,5 +230,16 @@ document.getElementById('btnCancel').addEventListener('click', function() {
     vokabelIndex++;
     naechsteVokabel();
 });
+// Mit "Enter" im Texteingabefeld direkt bestätigen
+document.getElementById('translation').addEventListener('keypress', function(event) {
+    // Prüfen, ob die gedrückte Taste "Enter" (Key-Code 13) ist
+    if (event.key === 'Enter') {
+        // Verhindert das Standard-Verhalten (z. B. Neuladen der Seite)
+        event.preventDefault(); 
+        
+        // Den "Check"-Button virtuell anklicken
+        document.getElementById('btnCheck').click();
+    }
+});
 
 loadVocabulary();
