@@ -1,153 +1,230 @@
-// HIER IHRE GOOGLE APPS SCRIPT WEB-APP-URL EINFÜGEN!
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbweRvIaqV1cRumvWSeHErTdjMREcCr1s53AUX5ZcSfpPqF9yr67NRjTrB7qYdrHygipuQ/exec';
 
-let vocabulary = [];
-let currentIndex = 0;
-let currentDirection = 'JA_DE'; 
+let faelligeAufgaben = []; // Entspricht Ihrem Array "FaelligeAufgaben"
+let alleVokabeln = []; // Speichert die Rohdaten aus Google Sheets
+let vokabelIndex = 0;
+let aktuelleZeile = 0;
+let richtung = 0; // 0 = JA->DE, 1 = DE->JA
+let loesung = "";
 
+// 1. Daten laden und aufbereiten
 async function loadVocabulary() {
     try {
-        document.getElementById('loadingMsg').innerText = "Verbinde mit Google Sheets...";
+        let response = await fetch(SCRIPT_URL, { method: 'GET' });
+        if (!response.ok) throw new Error("HTTP Fehler");
         
-        // Da 'file:///' blockiert wird, nutzen wir einen Trick für Google Scripts
-        let response = await fetch(SCRIPT_URL, {
-            method: 'GET',
-            // Wichtig: 'redirect' muss fehlen oder auf 'follow' stehen (Standard).
-            // Wir fügen keine eigenen Header (wie Content-Type) hinzu, da das bei CORS oft zu Problemen führt.
-        });
+        alleVokabeln = await response.json();
         
-        if (!response.ok) {
-            throw new Error(`HTTP Fehler! Status: ${response.status}`);
-        }
-        
-        vocabulary = await response.json();
-        
-        if (vocabulary && vocabulary.length > 0) {
-            document.getElementById('loadingMsg').style.display = 'none';
-            document.getElementById('trainerApp').style.display = 'block';
-            showNextWord();
+        if (alleVokabeln.length > 0) {
+            vokabeltrainerStarten();
         } else {
             throw new Error("Daten sind leer.");
         }
     } catch (error) {
-        document.getElementById('loadingMsg').innerText = "Fehler beim Laden (siehe Konsole).";
-        console.error("Detaillierter Fehler:", error);
+        document.getElementById('loadingMsg').innerText = "Fehler beim Laden.";
     }
 }
 
-// 2. Nächstes Wort anzeigen und UI vorbereiten
-function showNextWord() {
-    if(vocabulary.length > 0) {
-        let currentWord = vocabulary[currentIndex];
-        
-        // Zufällige Auswahl der Richtung (50/50 Chance)
-        currentDirection = Math.random() > 0.5 ? 'JA_DE' : 'DE_JA';
-        
-        // UI zurücksetzen
-        document.getElementById('feedback').innerText = '';
-        document.getElementById('translation').value = '';
-        document.getElementById('furigana').innerText = ''; 
-        
-        // Buttons auf Standard zurücksetzen
-        document.getElementById('btnGewusst').style.display = 'none';
-        document.getElementById('btnNichtGewusst').style.display = 'none';
-        document.getElementById('btnCheck').style.display = 'inline-block';
-        
-        if (currentDirection === 'JA_DE') {
-            // MODUS: Japanisch -> Deutsch (Antwort aufdecken)
-            document.getElementById('kanji').innerText = currentWord['Kanji'];
-            document.getElementById('translation').style.display = 'none'; 
-            document.getElementById('btnFurigana').style.display = 'inline-block'; 
-            document.getElementById('btnCheck').innerText = "Antwort aufdecken";
-        } else {
-            // MODUS: Deutsch -> Japanisch (Texteingabe)
-            document.getElementById('kanji').innerText = currentWord['Deutsch'];
-            document.getElementById('translation').style.display = 'block'; 
-            document.getElementById('translation').placeholder = "Japanisch (Kanji/Kana) eingeben...";
-            document.getElementById('btnFurigana').style.display = 'none'; 
-            document.getElementById('btnCheck').innerText = "Check";
+// 2. VBA "Sub VokabeltrainerStarten"
+function vokabeltrainerStarten() {
+    let heute = new Date();
+    heute.setHours(0,0,0,0);
+    
+    faelligeAufgaben = [];
+
+    alleVokabeln.forEach(vok => {
+        // Tageswechsel prüfen: Wenn letztes Training < heute, Status löschen
+        let letztesTrainingStr = vok['Datum des letzten Trainings'] || vok['Letztes Training'];
+        if (letztesTrainingStr) {
+            let letzesDatum = new Date(letztesTrainingStr);
+            if (letzesDatum < heute) {
+                vok['Status JA-->DE'] = "";
+                vok['Status DE-->JA'] = "";
+                vok['Datum des letzten Trainings'] = "";
+            }
         }
+
+        // Fällige Aufgaben filtern
+        let abfrageDatumStr = vok['Naechste Abfrage'];
+        if (abfrageDatumStr) {
+            let abfrageDatum = new Date(abfrageDatumStr);
+            abfrageDatum.setHours(0,0,0,0);
+            
+            if (abfrageDatum <= heute) {
+                let stat0 = vok['Status JA-->DE'];
+                let stat1 = vok['Status DE-->JA'];
+                
+                if (stat0 !== 1 && stat0 !== 3) {
+                    faelligeAufgaben.push({ row: vok.rowIndex, dir: 0, data: vok });
+                }
+                if (stat1 !== 1 && stat1 !== 3) {
+                    faelligeAufgaben.push({ row: vok.rowIndex, dir: 1, data: vok });
+                }
+            }
+        }
+    });
+
+    if (faelligeAufgaben.length === 0) {
+        document.getElementById('loadingMsg').innerText = "Super! Du hast für heute alle fälligen Vokabeln erfolgreich gelernt.";
+        return;
+    }
+
+    // Mischen (Shuffle)
+    for (let i = faelligeAufgaben.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [faelligeAufgaben[i], faelligeAufgaben[j]] = [faelligeAufgaben[j], faelligeAufgaben[i]];
+    }
+
+    document.getElementById('loadingMsg').style.display = 'none';
+    document.getElementById('trainerApp').style.display = 'block';
+    
+    vokabelIndex = 0;
+    naechsteVokabel();
+}
+
+// 3. VBA "Public Sub NaechsteVokabel"
+function naechsteVokabel() {
+    if (vokabelIndex >= faelligeAufgaben.length) {
+        document.getElementById('trainerApp').style.display = 'none';
+        document.getElementById('loadingMsg').style.display = 'block';
+        document.getElementById('loadingMsg').innerText = "Du hast alle fälligen Aufgaben für heute gelernt!";
+        return;
+    }
+
+    let aufgabe = faelligeAufgaben[vokabelIndex];
+    aktuelleZeile = aufgabe.row;
+    richtung = aufgabe.dir;
+    let vok = aufgabe.data;
+
+    // UI zurücksetzen
+    document.getElementById('feedback').innerText = '';
+    document.getElementById('translation').value = '';
+    document.getElementById('furigana').innerText = ''; 
+    document.getElementById('translation').style.display = 'none';
+    document.getElementById('btnFurigana').style.display = 'none';
+
+    if (richtung === 0) {
+        // JA -> DE
+        document.getElementById('kanji').innerText = vok['Kanji'];
+        loesung = vok['Deutsch'];
+        document.getElementById('btnCheck').innerText = "Antwort aufdecken";
+        document.getElementById('btnFurigana').style.display = 'inline-block';
+    } else {
+        // DE -> JA
+        document.getElementById('kanji').innerText = vok['Deutsch'];
+        loesung = vok['Kanji'];
+        document.getElementById('translation').style.display = 'block';
+        document.getElementById('translation').placeholder = "Japanisch (Kana/Kanji) eingeben...";
+        document.getElementById('btnCheck').innerText = "Prüfen";
     }
 }
 
-// 3. Fortschritt im Hintergrund an Google Sheets senden
-function updateProgress(word, isCorrect) {
-    let neuesFach = isCorrect ? Math.min(5, (word.Fach || 1) + 1) : 1; 
-    let datum = new Date().toISOString().split('T')[0]; 
-    
-    let payload = {
-        rowIndex: word.rowIndex,
-        fach: neuesFach,
-        naechsteAbfrage: datum
-    };
-
-    fetch(SCRIPT_URL, {
-        method: 'POST',
-        body: JSON.stringify(payload)
-    }).catch(err => console.error("Fehler beim Speichern:", err));
-}
-
-// 4. Event Listener für Buttons
+// 4. Buttons (Aufdecken & Prüfen)
 document.getElementById('btnCheck').addEventListener('click', function() {
-    let currentWord = vocabulary[currentIndex];
-    
-    if (currentDirection === 'JA_DE') {
-        // Japanisch -> Deutsch: Nur die Antwort aufdecken
-        document.getElementById('feedback').innerText = "Lösung: " + currentWord['Deutsch'];
-        document.getElementById('feedback').style.color = "#333";
-        
-        // Layout für Selbsteinschätzung umbauen
-        document.getElementById('btnCheck').style.display = 'none';
-        document.getElementById('btnFurigana').style.display = 'none';
-        document.getElementById('btnGewusst').style.display = 'inline-block';
-        document.getElementById('btnNichtGewusst').style.display = 'inline-block';
-        
+    if (richtung === 0) {
+        // JA -> DE Modal öffnen
+        document.getElementById('modalLoesung').innerText = loesung;
+        document.getElementById('modalAuswertung').style.display = 'block';
     } else {
-        // Deutsch -> Japanisch: Texteingabe überprüfen
-        let userInput = document.getElementById('translation').value.trim();
-        let isCorrect = (userInput === currentWord['Kanji'] || userInput === currentWord['Furigana']);
+        // DE -> JA Prüfen
+        let eingabe = document.getElementById('translation').value.trim();
+        if (eingabe === "") return;
         
-        updateProgress(currentWord, isCorrect); 
-        
-        if(isCorrect) {
+        let vok = faelligeAufgaben[vokabelIndex].data;
+        if (eingabe === loesung || eingabe === vok['Furigana']) {
             document.getElementById('feedback').innerText = "Richtig!";
             document.getElementById('feedback').style.color = "green";
-            setTimeout(() => {
-                currentIndex = (currentIndex + 1) % vocabulary.length;
-                showNextWord();
-            }, 1500);
+            setTimeout(() => verarbeiteAntwort(true), 1000);
         } else {
-            document.getElementById('feedback').innerText = `Falsch. Richtig wäre: ${currentWord['Kanji']} (${currentWord['Furigana']})`;
+            document.getElementById('feedback').innerText = `Falsch! Richtig ist:\n${vok['Furigana']}\n${loesung}`;
             document.getElementById('feedback').style.color = "red";
-            setTimeout(() => {
-                currentIndex = (currentIndex + 1) % vocabulary.length;
-                showNextWord();
-            }, 3000);
+            setTimeout(() => verarbeiteAntwort(false), 3000);
         }
     }
 });
 
-document.getElementById('btnGewusst').addEventListener('click', function() {
-    updateProgress(vocabulary[currentIndex], true);
-    currentIndex = (currentIndex + 1) % vocabulary.length;
-    showNextWord();
+// 5. Modal Buttons (JA -> DE)
+document.getElementById('btnModalGewusst').addEventListener('click', function() {
+    document.getElementById('modalAuswertung').style.display = 'none';
+    verarbeiteAntwort(true);
 });
 
-document.getElementById('btnNichtGewusst').addEventListener('click', function() {
-    updateProgress(vocabulary[currentIndex], false);
-    currentIndex = (currentIndex + 1) % vocabulary.length;
-    showNextWord();
+document.getElementById('btnModalFalsch').addEventListener('click', function() {
+    document.getElementById('modalAuswertung').style.display = 'none';
+    verarbeiteAntwort(false);
 });
 
 document.getElementById('btnFurigana').addEventListener('click', function() {
-    document.getElementById('furigana').innerText = vocabulary[currentIndex]['Furigana'];
+    document.getElementById('furigana').innerText = faelligeAufgaben[vokabelIndex].data['Furigana'];
 });
 
-// "Abbrechen/Überspringen" Button lädt das nächste Wort ohne Wertung
+// 6. VBA "Private Sub VerarbeiteAntwort"
+function verarbeiteAntwort(warRichtig) {
+    let aufgabe = faelligeAufgaben[vokabelIndex];
+    let vok = aufgabe.data;
+    
+    let statusFeld = richtung === 0 ? 'Status JA-->DE' : 'Status DE-->JA';
+    let aktuellerStatus = vok[statusFeld];
+
+    if (warRichtig) {
+        if (!aktuellerStatus) vok[statusFeld] = 1;
+        else if (aktuellerStatus === 2) vok[statusFeld] = 3;
+    } else {
+        if (!aktuellerStatus) vok[statusFeld] = 2;
+        // Falsche Vokabel wieder hinten anhängen
+        faelligeAufgaben.push({ row: aktuelleZeile, dir: richtung, data: vok });
+    }
+
+    vok['Datum des letzten Trainings'] = new Date().toISOString().split('T')[0];
+
+    // Prüfen, ob beide Richtungen fertig sind
+    let stat0 = vok['Status JA-->DE'];
+    let stat1 = vok['Status DE-->JA'];
+
+    let updates = { 
+        rowIndex: aktuelleZeile, 
+        statusJA: stat0, 
+        statusDE: stat1, 
+        letztesTraining: vok['Datum des letzten Trainings'] 
+    };
+
+    if ((stat0 === 1 || stat0 === 3) && (stat1 === 1 || stat1 === 3)) {
+        let fach = parseInt(vok['Fach']) || 1;
+        
+        if (stat0 === 1 && stat1 === 1) {
+            if (fach < 5) fach++;
+        } else {
+            if (fach > 1) fach--;
+        }
+
+        let tage = [0, 1, 3, 7, 14, 30][fach];
+        let neuesDatum = new Date();
+        neuesDatum.setDate(neuesDatum.getDate() + tage);
+        
+        updates.fach = fach;
+        updates.naechsteAbfrage = neuesDatum.toISOString().split('T')[0];
+        updates.statusJA = "";
+        updates.statusDE = "";
+        updates.letztesTraining = "";
+
+        // Im lokalen Array aktualisieren
+        vok['Fach'] = fach;
+        vok['Naechste Abfrage'] = updates.naechsteAbfrage;
+    }
+
+    // Speichern in Google Sheets im Hintergrund
+    fetch(SCRIPT_URL, {
+        method: 'POST',
+        body: JSON.stringify(updates)
+    });
+
+    vokabelIndex++;
+    naechsteVokabel();
+}
+
 document.getElementById('btnCancel').addEventListener('click', function() {
-    currentIndex = (currentIndex + 1) % vocabulary.length;
-    showNextWord();
+    vokabelIndex++;
+    naechsteVokabel();
 });
 
-// App starten
 loadVocabulary();

@@ -87,7 +87,16 @@
         </div>
         <p id="feedback"></p>
     </div>
-    
+        <!-- Modal für JA->DE Auswertung (versteckt) -->
+    <div id="modalAuswertung" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 1000;">
+        <div style="background: white; margin: 20% auto; padding: 30px; width: 80%; max-width: 300px; border-radius: 10px; text-align: center;">
+            <p>正解は (Die Lösung ist):</p>
+            <h3 id="modalLoesung" style="margin-bottom: 20px;"></h3>
+            <p>Gewusst?</p>
+            <button id="btnModalGewusst" style="background-color: #28a745; width: 45%;">はい (Richtig)</button>
+            <button id="btnModalFalsch" style="background-color: #dc3545; width: 45%;">いいえ (Falsch)</button>
+        </div>
+    </div>
     <script src="app.js"></script>
 </body>
 </html>
