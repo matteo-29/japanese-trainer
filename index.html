@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Japanisch Vokabeltrainer</title>
+	<link rel="manifest" href="manifest.json">
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('sw.js');
+    });
+  }
+</script>
+    <style>
+        body { 
+            font-family: 'MS UI Gothic', sans-serif; 
+            text-align: center; 
+            padding: 20px; 
+            background-color: #f4f4f9; 
+            margin: 0;
+        }
+        .card { 
+            background: white; 
+            border-radius: 12px; 
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1); 
+            padding: 30px; 
+            max-width: 400px; 
+            margin: 20px auto; 
+            display: none; /* Wird durch JS eingeblendet, sobald Daten geladen sind */
+        }
+        #furigana { font-size: 18px; color: #888; min-height: 24px; margin-bottom: 5px; }
+        #kanji { font-size: 40px; font-weight: bold; margin-bottom: 25px; }
+        
+        input[type="text"] { 
+            width: 100%; 
+            padding: 12px; 
+            margin-bottom: 20px; 
+            font-size: 16px; 
+            box-sizing: border-box; 
+            border: 1px solid #ccc; 
+            border-radius: 6px; 
+        }
+        
+        button { 
+            padding: 10px 15px; 
+            margin: 5px; 
+            font-size: 14px; 
+            cursor: pointer; 
+            border: none; 
+            border-radius: 6px; 
+            background-color: #007BFF; 
+            color: white; 
+            font-weight: bold;
+        }
+        button:hover { background-color: #0056b3; }
+        
+        /* Spezifische Button-Farben */
+        #btnCancel { background-color: #6c757d; }
+        #btnCancel:hover { background-color: #5a6268; }
+        #btnFurigana { background-color: #17a2b8; }
+        #btnGewusst { background-color: #28a745; display: none; }
+        #btnNichtGewusst { background-color: #dc3545; display: none; }
+        
+        #feedback { font-weight: bold; margin-top: 15px; min-height: 20px; font-size: 16px;}
+        #loadingMsg { font-size: 20px; margin-top: 50px; }
+    </style>
+</head>
+<body>
+    <h2>Vokabeltrainer</h2>
+    
+    <div id="loadingMsg">Lade Daten aus der Cloud...</div>
+    
+    <div class="card" id="trainerApp">
+        <div id="furigana"></div>
+        <div id="kanji"></div>
+        
+        <input type="text" id="translation" placeholder="Deutsche Übersetzung...">
+        
+        <div>
+            <button id="btnCancel">キャンセル (Überspringen)</button>
+            <button id="btnFurigana">ふりがな</button>
+            <button id="btnCheck">Check</button>
+            
+            <button id="btnGewusst">Gewusst</button>
+            <button id="btnNichtGewusst">Nicht gewusst</button>
+        </div>
+        <p id="feedback"></p>
+    </div>
+        <!-- Modal für JA->DE Auswertung (versteckt) -->
+    <div id="modalAuswertung" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 1000;">
+        <div style="background: white; margin: 20% auto; padding: 30px; width: 80%; max-width: 300px; border-radius: 10px; text-align: center;">
+            <p>正解は (Die Lösung ist):</p>
+            <h3 id="modalLoesung" style="margin-bottom: 20px;"></h3>
+            <p>Gewusst?</p>
+            <button id="btnModalGewusst" style="background-color: #28a745; width: 45%;">はい (Richtig)</button>
+            <button id="btnModalFalsch" style="background-color: #dc3545; width: 45%;">いいえ (Falsch)</button>
+        </div>
+    </div>
+    <script src="app.js"></script>
+</body>
+</html>
