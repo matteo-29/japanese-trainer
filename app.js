@@ -1,3 +1,56 @@
+// --- PWA INSTALLATION ---
+let deferredPrompt;
+const installBtn = document.getElementById('btnInstall');
+
+// Service Worker Registrierung (Voraussetzung für App-Installation)
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js').then((registration) => {
+            console.log('ServiceWorker registriert:', registration.scope);
+        }).catch((err) => {
+            console.log('ServiceWorker fehlgeschlagen:', err);
+        });
+    });
+}
+
+// Event abfangen, bevor der Browser den Installations-Prompt selbst anzeigt
+window.addEventListener('beforeinstallprompt', (e) => {
+    // Verhindert das automatische Anzeigen in älteren Browsern
+    e.preventDefault();
+    // Prompt für später speichern
+    deferredPrompt = e;
+    // Installations-Button im Hauptmenü anzeigen
+    if (installBtn) {
+        installBtn.style.display = 'block';
+    }
+});
+
+if (installBtn) {
+    installBtn.addEventListener('click', async () => {
+        if (deferredPrompt) {
+            // Installations-Prompt des Browsers anzeigen
+            deferredPrompt.prompt();
+            // Warten auf die Antwort des Nutzers
+            const { outcome } = await deferredPrompt.userChoice;
+            console.log(`User response to the install prompt: ${outcome}`);
+            // Prompt kann nur einmal verwendet werden
+            deferredPrompt = null;
+            // Button wieder verstecken
+            installBtn.style.display = 'none';
+        }
+    });
+}
+
+// Wenn die App erfolgreich installiert wurde, verstecken wir den Button
+window.addEventListener('appinstalled', () => {
+    if (installBtn) {
+        installBtn.style.display = 'none';
+    }
+    deferredPrompt = null;
+    console.log('PWA wurde erfolgreich installiert');
+});
+
+// --- Ab hier folgt Ihr bestehender Code für SCRIPT_URL, Navigation, etc... ---
 // TRAGEN SIE HIER IHRE GOOGLE APPS SCRIPT URL EIN
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbweRvIaqV1cRumvWSeHErTdjMREcCr1s53AUX5ZcSfpPqF9yr67NRjTrB7qYdrHygipuQ/exec';
 

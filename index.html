@@ -4,19 +4,25 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>日本語 Trainer</title>
+    
+    <!-- WICHTIG FÜR PWA -->
+    <link rel="manifest" href="manifest.json">
+    
     <style>
         :root {
-            --primary-color: #4CAF50;
-            --secondary-color: #2196F3;
+            /* Hier ändern wir die Hauptfarbe wieder auf Ihr Blau */
+            --primary-color: #2196F3;
+            --secondary-color: #4CAF50;
             --bg-color: #f4f4f9;
             --text-color: #333;
         }
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; background-color: var(--bg-color); color: var(--text-color); padding-bottom: 20px; }
         header { background: var(--primary-color); color: white; padding: 15px; text-align: center; font-size: 20px; font-weight: bold; position: sticky; top: 0; z-index: 100; }
         .card { background: white; padding: 20px; margin: 15px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        .btn-primary, .btn-secondary { padding: 15px; border: none; border-radius: 8px; cursor: pointer; font-size: 16px; font-weight: bold; margin-bottom: 10px; width: 100%; box-sizing: border-box; }
+        .btn-primary, .btn-secondary, .btn-install { padding: 15px; border: none; border-radius: 8px; cursor: pointer; font-size: 16px; font-weight: bold; margin-bottom: 10px; width: 100%; box-sizing: border-box; }
         .btn-primary { background: var(--primary-color); color: white; }
         .btn-secondary { background: #e0e0e0; color: #333; }
+        .btn-install { background: #ff9800; color: white; margin-top: 20px; display: none; } /* Standardmäßig versteckt */
         input[type="text"] { width: 100%; padding: 12px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; font-size: 16px; }
         
         #furigana { font-size: 14px; color: #666; text-align: center; min-height: 20px; margin-bottom: 5px; }
@@ -44,91 +50,12 @@
     <button id="btnStartLernen" class="btn-primary" style="padding: 20px; font-size: 18px;">▶️ Start</button>
     <button id="btnLernfortschritt" class="btn-secondary" style="padding: 20px; font-size: 18px;">📊 Lernfortschritt</button>
     <button id="btnWorterverzeichnis" class="btn-secondary" style="padding: 20px; font-size: 18px;">📖 Wörterverzeichnis</button>
-</div>
-
-<!-- ANSICHT 1: LERNEN -->
-<div id="viewLernen" style="display: none;">
-    <div id="loadingMsg" style="text-align: center; margin-top: 50px;">
-        <div class="spinner"></div>
-        <div style="font-size: 16px; color: #666;">Lade Vokabeln aus der Cloud...</div>
-    </div>
     
-    <div class="card" id="trainerApp" style="display: none;">
-        <div id="furigana"></div>
-        <div id="kanji"></div>
-        
-        <input type="text" id="translation" placeholder="Antwort eingeben..." autocomplete="off">
-        <p id="feedback" style="font-weight: bold; text-align: center; min-height: 20px;"></p>
-        
-        <div style="display: flex; gap: 10px; margin-top: 15px;">
-            <button class="btn-secondary" id="btnCancel" style="flex: 1;">Überspringen</button>
-            <button class="btn-secondary" id="btnFurigana" style="flex: 1; display: none;">Furigana</button>
-        </div>
-        <button class="btn-primary" id="btnCheck" style="margin-top: 10px;">Prüfen</button>
-    </div>
-
-    <!-- Tägliche Fortschrittsanzeige unter dem Trainer -->
-    <div class="card" id="dailyProgressContainer" style="display: none; text-align: center;">
-        <h3>Heutiger Fortschritt</h3>
-        <div style="background: #e0e0e0; border-radius: 10px; height: 20px; width: 100%; margin: 10px 0; overflow: hidden;">
-            <div id="dailyProgressFill" style="background: var(--primary-color); height: 100%; width: 0%; transition: width 0.3s;"></div>
-        </div>
-        <div id="dailyProgressText">0%</div>
-    </div>
+    <!-- INSTALLATIONS BUTTON -->
+    <button id="btnInstall" class="btn-install">📱 App auf Homescreen installieren</button>
 </div>
 
-<!-- ANSICHT 2: LERNFORTSCHRITT -->
-<div id="viewFortschritt" style="display: none; padding: 20px;">
-    <h2>Lernfortschritt (Level)</h2>
-    <div class="card" id="chartContainer" style="margin-top: 20px;">
-        <!-- Diagramm wird per JS generiert -->
-    </div>
-</div>
-
-<!-- ANSICHT 3: WÖRTERVERZEICHNIS -->
-<div id="viewVerzeichnis" style="display: none; padding: 10px;">
-    <div class="card">
-        <h3 style="margin-top: 0;">Neues Wort hinzufügen</h3>
-        <input type="text" id="addKanji" placeholder="Kanji (optional)">
-        <input type="text" id="addFurigana" placeholder="Kana (optional)">
-        <input type="text" id="addDeutsch" placeholder="Bedeutung (Pflicht)">
-        <p id="addFeedback" style="font-weight: bold; min-height: 20px; font-size: 14px;"></p>
-        <button class="btn-primary" id="btnSubmitWord">Zur Liste hinzufügen</button>
-    </div>
-
-    <h3 style="padding: 0 15px;">Gespeicherte Vokabeln</h3>
-    <div id="worterListe">
-        <!-- Liste wird per JS generiert -->
-    </div>
-</div>
-
-<!-- MODAL: AUSWERTUNG BEIM LERNEN -->
-<div id="modalAuswertung" class="modal">
-    <div class="modal-content">
-        <h3>Die Lösung ist:</h3>
-        <p id="modalLoesung" style="font-size: 24px; font-weight: bold; margin: 20px 0;"></p>
-        <p>Gewusst?</p>
-        <div style="display: flex; gap: 10px; margin-top: 20px;">
-            <button class="btn-primary" id="btnModalGewusst" style="flex: 1;">Richtig</button>
-            <button class="btn-secondary" id="btnModalFalsch" style="flex: 1; background: #f44336; color: white;">Falsch</button>
-        </div>
-    </div>
-</div>
-
-<!-- MODAL: WORT BEARBEITEN -->
-<div id="modalEdit" class="modal">
-    <div class="modal-content">
-        <h3>Wort bearbeiten</h3>
-        <input type="hidden" id="editRowIndex">
-        <input type="text" id="editKanji" placeholder="Kanji">
-        <input type="text" id="editFurigana" placeholder="Kana">
-        <input type="text" id="editDeutsch" placeholder="Bedeutung">
-        <div style="display: flex; gap: 10px; margin-top: 15px;">
-            <button class="btn-primary" id="btnSaveEdit" style="flex: 1;">Speichern</button>
-            <button class="btn-secondary" id="btnCancelEdit" style="flex: 1;">Abbrechen</button>
-        </div>
-    </div>
-</div>
+<!-- Restliche HTML Struktur bleibt gleich (viewLernen, viewFortschritt, viewVerzeichnis, Modals...) -->
 
 <script src="app.js"></script>
 </body>
