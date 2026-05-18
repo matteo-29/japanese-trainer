@@ -10,7 +10,7 @@
     
     <style>
         :root {
-            /* ORIGINAL FARBEN WIEDERHERGESTELLT */
+            /* Das originale Indigo-Blau */
             --primary: #4F46E5;
             --primary-hover: #4338CA;
             --bg: #F3F4F6;
@@ -24,7 +24,6 @@
         header { background: var(--primary); color: white; padding: 15px; text-align: center; font-size: 20px; font-weight: bold; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
         .card { background: var(--surface); padding: 20px; margin: 15px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
         
-        /* Button Styling angelehnt an Original */
         button { font-family: inherit; }
         .btn-primary, .btn-secondary, .btn-install { padding: 15px; border: none; border-radius: 8px; cursor: pointer; font-size: 16px; font-weight: 600; margin-bottom: 10px; width: 100%; box-sizing: border-box; transition: background-color 0.2s; }
         .btn-primary { background: var(--primary); color: white; }
@@ -34,7 +33,7 @@
         .btn-install { background: #F59E0B; color: white; margin-top: 20px; display: none; }
         
         input[type="text"] { width: 100%; padding: 12px; margin-bottom: 10px; border: 1px solid #D1D5DB; border-radius: 8px; box-sizing: border-box; font-size: 16px; background: #F9FAFB; }
-        input[type="text"]:focus { outline: none; border-color: var(--primary); ring: 2px solid var(--primary); }
+        input[type="text"]:focus { outline: none; border-color: var(--primary); }
         
         #furigana { font-size: 14px; color: var(--text-muted); text-align: center; min-height: 20px; margin-bottom: 5px; }
         #kanji { font-size: 48px; text-align: center; margin-bottom: 20px; font-weight: bold; }
@@ -121,4 +120,30 @@
 <div id="modalAuswertung" class="modal">
     <div class="modal-content">
         <h3>Die Lösung ist:</h3>
-        <p id="modalLoesung" 
+        <p id="modalLoesung" style="font-size: 24px; font-weight: bold; margin: 20px 0;"></p>
+        <p>Gewusst?</p>
+        <div style="display: flex; gap: 10px; margin-top: 20px;">
+            <button class="btn-primary" id="btnModalGewusst" style="flex: 1;">Richtig</button>
+            <button class="btn-secondary" id="btnModalFalsch" style="flex: 1; background: var(--danger); color: white;">Falsch</button>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL: WORT BEARBEITEN -->
+<div id="modalEdit" class="modal">
+    <div class="modal-content">
+        <h3 style="margin-top: 0;">Wort bearbeiten</h3>
+        <input type="hidden" id="editRowIndex">
+        <input type="text" id="editKanji" placeholder="Kanji">
+        <input type="text" id="editFurigana" placeholder="Kana">
+        <input type="text" id="editDeutsch" placeholder="Bedeutung">
+        <div style="display: flex; gap: 10px; margin-top: 15px;">
+            <button class="btn-primary" id="btnSaveEdit" style="flex: 1;">Speichern</button>
+            <button class="btn-secondary" id="btnCancelEdit" style="flex: 1;">Abbrechen</button>
+        </div>
+    </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
