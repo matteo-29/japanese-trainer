@@ -45,6 +45,12 @@
         /* Spinner */
         .spinner { border: 4px solid #F3F4F6; border-top: 4px solid var(--primary); border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto 10px auto; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* Original Daily Progress Styles */
+        .daily-progress { margin-top: 18px; width: 100%; }
+        .daily-progress-top { display: flex; justify-content: space-between; align-items: center; font-size: 14px; font-weight: 600; color: #374151; margin-bottom: 8px; }
+        .daily-progress-bar { background-color: #E5E7EB; border-radius: 9999px; height: 10px; width: 100%; overflow: hidden; }
+        .daily-progress-fill { background-color: var(--primary); height: 100%; border-radius: 9999px; width: 0%; transition: width 0.3s ease; }
     </style>
 </head>
 <body>
@@ -54,6 +60,11 @@
     日本語 Trainer
 </header>
 
+<!-- PULL TO REFRESH CONTAINER -->
+<div id="ptr" style="height: 0px; overflow: hidden; background: #E5E7EB; display: flex; align-items: center; justify-content: center; font-weight: bold; color: var(--text-muted); transition: height 0.3s ease;">
+    ⬇️ Zum Aktualisieren ziehen...
+</div>
+
 <!-- HAUPTMENÜ -->
 <div id="viewMenu" style="padding: 20px; text-align: center;">
     <h2 style="margin-bottom: 30px;">Hauptmenü</h2>
@@ -61,7 +72,6 @@
     <button id="btnLernfortschritt" class="btn-secondary" style="padding: 20px; font-size: 18px;">📊 Lernfortschritt</button>
     <button id="btnWorterverzeichnis" class="btn-secondary" style="padding: 20px; font-size: 18px;">📖 Wörterverzeichnis</button>
     
-    <!-- INSTALLATIONS BUTTON -->
     <button id="btnInstall" class="btn-install">📱 App installieren</button>
 </div>
 
@@ -84,15 +94,17 @@
             <button class="btn-secondary" id="btnFurigana" style="flex: 1; display: none;">Furigana</button>
         </div>
         <button class="btn-primary" id="btnCheck" style="margin-top: 10px;">Prüfen</button>
-    </div>
 
-    <!-- Tägliche Fortschrittsanzeige -->
-    <div class="card" id="dailyProgressContainer" style="display: none; text-align: center;">
-        <h3 style="margin-top: 0;">Heutiger Fortschritt</h3>
-        <div style="background: #E5E7EB; border-radius: 10px; height: 20px; width: 100%; margin: 10px 0; overflow: hidden;">
-            <div id="dailyProgressFill" style="background: var(--primary); height: 100%; width: 0%; transition: width 0.3s;"></div>
+        <!-- Eleganter Fortschrittsbalken in der Karte -->
+        <div class="daily-progress" id="dailyProgressContainer" style="display: none;">
+            <div class="daily-progress-top">
+                <span>Heutiger Fortschritt</span>
+                <span id="dailyProgressText">0%</span>
+            </div>
+            <div class="daily-progress-bar">
+                <div id="dailyProgressFill" class="daily-progress-fill"></div>
+            </div>
         </div>
-        <div id="dailyProgressText" style="font-weight: bold;">0%</div>
     </div>
 </div>
 
@@ -113,7 +125,15 @@
         <button class="btn-primary" id="btnSubmitWord">Zur Liste hinzufügen</button>
     </div>
     <h3 style="padding: 0 15px;">Gespeicherte Vokabeln</h3>
-    <div id="worterListe"></div>
+    
+    <!-- Ladekreis für das Wörterverzeichnis -->
+    <div id="loadingVerzeichnis" style="text-align: center; margin-top: 30px;">
+        <div class="spinner"></div>
+        <div style="font-size: 16px; color: var(--text-muted);">Lade Liste aus der Cloud...</div>
+    </div>
+
+    <!-- Liste -->
+    <div id="worterListe" style="display: none;"></div>
 </div>
 
 <!-- MODAL: AUSWERTUNG -->

@@ -10,7 +10,6 @@ let loesung = "";
 let todayDone = 0;
 let todayTotal = 0;
 
-// Wartet bis das HTML geladen ist, damit die Buttons gefunden werden
 document.addEventListener('DOMContentLoaded', () => {
     
     // --- PWA INSTALLATION ---
@@ -79,7 +78,62 @@ document.addEventListener('DOMContentLoaded', () => {
         else renderWorterverzeichnis();
     });
 
-    // --- EVENT LISTENER FÜR LERNEN ---
+    // --- PULL TO REFRESH LOGIK ---
+    let startY = 0;
+    let ptrContainer = document.getElementById('ptr');
+    let isPulling = false;
+
+    window.addEventListener('touchstart', (e) => {
+        if (window.scrollY === 0) {
+            startY = e.touches[0].clientY;
+            isPulling = true;
+            ptrContainer.style.transition = 'none';
+        }
+    }, { passive: true });
+
+    window.addEventListener('touchmove', (e) => {
+        if (!isPulling) return;
+        let y = e.touches[0].clientY;
+        let deltaY = y - startY;
+
+        if (deltaY > 0 && window.scrollY === 0) {
+            if (e.cancelable) e.preventDefault(); 
+            let height = Math.min(deltaY * 0.4, 80); 
+            ptrContainer.style.height = height + 'px';
+            
+            if (height > 50) {
+                ptrContainer.innerHTML = '🔄 Loslassen zum Aktualisieren';
+            } else {
+                ptrContainer.innerHTML = '⬇️ Zum Aktualisieren ziehen...';
+            }
+        }
+    }, { passive: false });
+
+    window.addEventListener('touchend', () => {
+        if (!isPulling) return;
+        isPulling = false;
+        ptrContainer.style.transition = 'height 0.3s ease'; 
+        
+        let currentHeight = parseInt(ptrContainer.style.height || '0');
+        
+        if (currentHeight > 50) {
+            ptrContainer.style.height = '50px';
+            ptrContainer.innerHTML = '<div class="spinner" style="width:20px;height:20px;border-width:3px;margin:0 10px 0 0;"></div> Daten laden...';
+            
+            loadVocabulary().then(() => {
+                if (document.getElementById('viewVerzeichnis').style.display === 'block') {
+                    renderWorterverzeichnis();
+                } else if (document.getElementById('viewFortschritt').style.display === 'block') {
+                    renderFortschrittChart();
+                }
+                setTimeout(() => { ptrContainer.style.height = '0px'; }, 500);
+            });
+        } else {
+            ptrContainer.style.height = '0px';
+        }
+    });
+
+    // --- EVENT LISTENER LERNEN ---
     document.getElementById('btnCheck').addEventListener('click', function() {
         if (richtung === 0) {
             document.getElementById('modalLoesung').innerText = loesung;
@@ -134,14 +188,14 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // --- EVENT LISTENER FÜR WÖRTERVERZEICHNIS ---
+    // --- EVENT LISTENER WÖRTERVERZEICHNIS ---
     document.getElementById('btnSubmitWord').addEventListener('click', () => {
         let kanji = document.getElementById('addKanji').value.trim();
         let furigana = document.getElementById('addFurigana').value.trim();
         let deutsch = document.getElementById('addDeutsch').value.trim();
 
         if (!deutsch || (!kanji && !furigana)) {
-            document.getElementById('addFeedback').innerText = 'Bitte füllen Sie die Bedeutung und mindestens Kanji oder Kana aus!';
+            document.getElementById('addFeedback').innerText = 'Bitte füllen Sie die Bedeutung und mindestens Kanji/Kana aus!';
             document.getElementById('addFeedback').style.color = 'var(--danger)';
             return;
         }
@@ -156,7 +210,7 @@ document.addEventListener('DOMContentLoaded', () => {
             headers: { 'Content-Type': 'text/plain;charset=utf-8' },
             body: JSON.stringify({ action: 'addWord', kanji: kanji, furigana: furigana, deutsch: deutsch })
         }).then(() => {
-            document.getElementById('addFeedback').innerText = 'Wort erfolgreich hinzugefügt!';
+            document.getElementById('addFeedback').innerText = 'Erfolgreich hinzugefügt!';
             document.getElementById('addFeedback').style.color = 'var(--success)';
             document.getElementById('addKanji').value = '';
             document.getElementById('addFurigana').value = '';
@@ -199,9 +253,9 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // Globale Funktionen für das Inline-HTML onclick
+    // GLOBALE FUNKTIONEN FÜR INLINE-HTML
     window.deleteWord = function(rowIndex) {
-        if (!confirm("Möchten Sie dieses Wort wirklich löschen?")) return;
+        if (!confirm("Wort wirklich dauerhaft löschen?")) return;
         fetch(SCRIPT_URL, {
             method: 'POST',
             mode: 'no-cors',
@@ -220,11 +274,11 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('modalEdit').style.display = 'block';
     };
 
-    // App initial starten (im Hintergrund laden)
+    // INIT
     loadVocabulary();
 });
 
-// --- FUNKTIONEN (Außerhalb des DOMContentLoaded für Übersichtlichkeit) ---
+// --- FUNKTIONEN ---
 async function loadVocabulary() {
     try {
         document.getElementById('loadingMsg').style.display = 'block';
@@ -367,7 +421,6 @@ function verarbeiteAntwort(warRichtig) {
     }
 
     vok['Datum des letzten Trainings'] = new Date().toISOString().split('T')[0];
-
     let stat0 = vok['Status JA-->DE'];
     let stat1 = vok['Status DE-->JA'];
     let updates = { rowIndex: aktuelleZeile, statusJA: stat0, statusDE: stat1, letztesTraining: vok['Datum des letzten Trainings'] };
@@ -427,22 +480,31 @@ function renderFortschrittChart() {
 
 function renderWorterverzeichnis() {
     const container = document.getElementById('worterListe');
+    const loadingSpinner = document.getElementById('loadingVerzeichnis');
+    
+    container.style.display = 'none';
+    if(loadingSpinner) loadingSpinner.style.display = 'block';
     container.innerHTML = ''; 
 
-    [...alleVokabeln].reverse().forEach(vok => {
-        let div = document.createElement('div');
-        div.className = 'card';
-        div.style.margin = '10px 0';
-        div.innerHTML = `
-            <div style="font-size: 18px; font-weight: bold; margin-bottom: 5px;">${vok['Deutsch'] || '-'}</div>
-            <div style="color: var(--text-muted); margin-bottom: 15px; font-size: 14px;">
-                Kanji: ${vok['Kanji'] || '-'} | Kana: ${vok['Furigana'] || '-'}
-            </div>
-            <div style="display: flex; gap: 10px;">
-                <button onclick="openEditModal(${vok.rowIndex})" class="btn-secondary" style="margin: 0; padding: 10px;">✏️ Ändern</button>
-                <button onclick="deleteWord(${vok.rowIndex})" class="btn-secondary" style="margin: 0; padding: 10px; background: #FEE2E2; color: var(--danger);">🗑️ Löschen</button>
-            </div>
-        `;
-        container.appendChild(div);
-    });
+    setTimeout(() => {
+        [...alleVokabeln].reverse().forEach(vok => {
+            let div = document.createElement('div');
+            div.className = 'card';
+            div.style.margin = '10px 0';
+            div.innerHTML = `
+                <div style="font-size: 18px; font-weight: bold; margin-bottom: 5px;">${vok['Deutsch'] || '-'}</div>
+                <div style="color: var(--text-muted); margin-bottom: 15px; font-size: 14px;">
+                    Kanji: ${vok['Kanji'] || '-'} | Kana: ${vok['Furigana'] || '-'}
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    <button onclick="openEditModal(${vok.rowIndex})" class="btn-secondary" style="margin: 0; padding: 10px;">✏️ Ändern</button>
+                    <button onclick="deleteWord(${vok.rowIndex})" class="btn-secondary" style="margin: 0; padding: 10px; background: #FEE2E2; color: var(--danger);">🗑️ Löschen</button>
+                </div>
+            `;
+            container.appendChild(div);
+        });
+
+        if(loadingSpinner) loadingSpinner.style.display = 'none';
+        container.style.display = 'block';
+    }, 50);
 }
