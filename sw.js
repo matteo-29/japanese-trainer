@@ -1,4 +1,4 @@
-const CACHE_NAME = 'japanisch-trainer-v6'; // Erhöhen Sie diese Nummer (v2, v3, etc.) bei jedem großen Update!
+const CACHE_NAME = 'japanisch-trainer-v7'; // Erhöhen Sie diese Nummer (v2, v3, etc.) bei jedem großen Update!
 const urlsToCache = [
   './',
   './index.html',

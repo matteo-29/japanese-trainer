@@ -1,56 +1,3 @@
-// --- PWA INSTALLATION ---
-let deferredPrompt;
-const installBtn = document.getElementById('btnInstall');
-
-// Service Worker Registrierung (Voraussetzung für App-Installation)
-if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js').then((registration) => {
-            console.log('ServiceWorker registriert:', registration.scope);
-        }).catch((err) => {
-            console.log('ServiceWorker fehlgeschlagen:', err);
-        });
-    });
-}
-
-// Event abfangen, bevor der Browser den Installations-Prompt selbst anzeigt
-window.addEventListener('beforeinstallprompt', (e) => {
-    // Verhindert das automatische Anzeigen in älteren Browsern
-    e.preventDefault();
-    // Prompt für später speichern
-    deferredPrompt = e;
-    // Installations-Button im Hauptmenü anzeigen
-    if (installBtn) {
-        installBtn.style.display = 'block';
-    }
-});
-
-if (installBtn) {
-    installBtn.addEventListener('click', async () => {
-        if (deferredPrompt) {
-            // Installations-Prompt des Browsers anzeigen
-            deferredPrompt.prompt();
-            // Warten auf die Antwort des Nutzers
-            const { outcome } = await deferredPrompt.userChoice;
-            console.log(`User response to the install prompt: ${outcome}`);
-            // Prompt kann nur einmal verwendet werden
-            deferredPrompt = null;
-            // Button wieder verstecken
-            installBtn.style.display = 'none';
-        }
-    });
-}
-
-// Wenn die App erfolgreich installiert wurde, verstecken wir den Button
-window.addEventListener('appinstalled', () => {
-    if (installBtn) {
-        installBtn.style.display = 'none';
-    }
-    deferredPrompt = null;
-    console.log('PWA wurde erfolgreich installiert');
-});
-
-// --- Ab hier folgt Ihr bestehender Code für SCRIPT_URL, Navigation, etc... ---
 // TRAGEN SIE HIER IHRE GOOGLE APPS SCRIPT URL EIN
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbweRvIaqV1cRumvWSeHErTdjMREcCr1s53AUX5ZcSfpPqF9yr67NRjTrB7qYdrHygipuQ/exec';
 
@@ -63,56 +10,221 @@ let loesung = "";
 let todayDone = 0;
 let todayTotal = 0;
 
-// --- NAVIGATION ---
-const viewMenu = document.getElementById('viewMenu');
-const viewLernen = document.getElementById('viewLernen');
-const viewFortschritt = document.getElementById('viewFortschritt');
-const viewVerzeichnis = document.getElementById('viewVerzeichnis');
-const btnBackToMenu = document.getElementById('btnBackToMenu');
-
-function showView(view) {
-    viewMenu.style.display = 'none';
-    viewLernen.style.display = 'none';
-    viewFortschritt.style.display = 'none';
-    viewVerzeichnis.style.display = 'none';
-    view.style.display = 'block';
+// Wartet bis das HTML geladen ist, damit die Buttons gefunden werden
+document.addEventListener('DOMContentLoaded', () => {
     
-    // Zurück-Button überall außer im Hauptmenü anzeigen
-    btnBackToMenu.style.display = view === viewMenu ? 'none' : 'block';
-}
+    // --- PWA INSTALLATION ---
+    let deferredPrompt;
+    const installBtn = document.getElementById('btnInstall');
 
-btnBackToMenu.addEventListener('click', () => {
-    showView(viewMenu);
-});
-
-document.getElementById('btnStartLernen').addEventListener('click', () => {
-    showView(viewLernen);
-    if (alleVokabeln.length === 0) {
-        loadVocabulary();
-    } else {
-        vokabeltrainerStarten();
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('sw.js').catch((err) => console.log('ServiceWorker fehlgeschlagen:', err));
     }
-});
 
-document.getElementById('btnLernfortschritt').addEventListener('click', () => {
-    showView(viewFortschritt);
-    if (alleVokabeln.length === 0) {
-        loadVocabulary().then(renderFortschrittChart);
-    } else {
-        renderFortschrittChart();
+    window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredPrompt = e;
+        if (installBtn) installBtn.style.display = 'block';
+    });
+
+    if (installBtn) {
+        installBtn.addEventListener('click', async () => {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                await deferredPrompt.userChoice;
+                deferredPrompt = null;
+                installBtn.style.display = 'none';
+            }
+        });
     }
-});
 
-document.getElementById('btnWorterverzeichnis').addEventListener('click', () => {
-    showView(viewVerzeichnis);
-    if (alleVokabeln.length === 0) {
-        loadVocabulary().then(renderWorterverzeichnis);
-    } else {
-        renderWorterverzeichnis();
+    window.addEventListener('appinstalled', () => {
+        if (installBtn) installBtn.style.display = 'none';
+        deferredPrompt = null;
+    });
+
+    // --- NAVIGATION ---
+    const viewMenu = document.getElementById('viewMenu');
+    const viewLernen = document.getElementById('viewLernen');
+    const viewFortschritt = document.getElementById('viewFortschritt');
+    const viewVerzeichnis = document.getElementById('viewVerzeichnis');
+    const btnBackToMenu = document.getElementById('btnBackToMenu');
+
+    function showView(view) {
+        viewMenu.style.display = 'none';
+        viewLernen.style.display = 'none';
+        viewFortschritt.style.display = 'none';
+        viewVerzeichnis.style.display = 'none';
+        view.style.display = 'block';
+        btnBackToMenu.style.display = view === viewMenu ? 'none' : 'block';
     }
+
+    btnBackToMenu.addEventListener('click', () => showView(viewMenu));
+
+    document.getElementById('btnStartLernen').addEventListener('click', () => {
+        showView(viewLernen);
+        if (alleVokabeln.length === 0) loadVocabulary();
+        else vokabeltrainerStarten();
+    });
+
+    document.getElementById('btnLernfortschritt').addEventListener('click', () => {
+        showView(viewFortschritt);
+        if (alleVokabeln.length === 0) loadVocabulary().then(renderFortschrittChart);
+        else renderFortschrittChart();
+    });
+
+    document.getElementById('btnWorterverzeichnis').addEventListener('click', () => {
+        showView(viewVerzeichnis);
+        if (alleVokabeln.length === 0) loadVocabulary().then(renderWorterverzeichnis);
+        else renderWorterverzeichnis();
+    });
+
+    // --- EVENT LISTENER FÜR LERNEN ---
+    document.getElementById('btnCheck').addEventListener('click', function() {
+        if (richtung === 0) {
+            document.getElementById('modalLoesung').innerText = loesung;
+            document.getElementById('modalAuswertung').style.display = 'block';
+        } else {
+            if (this.innerText === 'Weiter') {
+                this.innerText = 'Prüfen';
+                document.getElementById('translation').disabled = false;
+                verarbeiteAntwort(false);
+                return;
+            }
+            let eingabe = document.getElementById('translation').value.trim();
+            if (eingabe === '') return;
+
+            let vok = faelligeAufgaben[vokabelIndex].data;
+            if (eingabe === loesung || eingabe === vok['Furigana']) {
+                document.getElementById('feedback').innerText = 'Richtig!';
+                document.getElementById('feedback').style.color = 'var(--success)';
+                setTimeout(() => verarbeiteAntwort(true), 1000);
+            } else {
+                document.getElementById('feedback').innerText = `Falsch! Richtig ist:\n${vok['Furigana'] ? vok['Furigana'] : ''}\n${loesung}`;
+                document.getElementById('feedback').style.color = 'var(--danger)';
+                document.getElementById('translation').disabled = true;
+                this.innerText = 'Weiter';
+            }
+        }
+    });
+
+    document.getElementById('btnModalGewusst').addEventListener('click', () => {
+        document.getElementById('modalAuswertung').style.display = 'none';
+        verarbeiteAntwort(true);
+    });
+
+    document.getElementById('btnModalFalsch').addEventListener('click', () => {
+        document.getElementById('modalAuswertung').style.display = 'none';
+        verarbeiteAntwort(false);
+    });
+
+    document.getElementById('btnFurigana').addEventListener('click', () => {
+        document.getElementById('furigana').innerText = faelligeAufgaben[vokabelIndex].data['Furigana'];
+    });
+
+    document.getElementById('btnCancel').addEventListener('click', () => {
+        vokabelIndex++;
+        naechsteVokabel();
+    });
+
+    document.getElementById('translation').addEventListener('keypress', (event) => {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            document.getElementById('btnCheck').click();
+        }
+    });
+
+    // --- EVENT LISTENER FÜR WÖRTERVERZEICHNIS ---
+    document.getElementById('btnSubmitWord').addEventListener('click', () => {
+        let kanji = document.getElementById('addKanji').value.trim();
+        let furigana = document.getElementById('addFurigana').value.trim();
+        let deutsch = document.getElementById('addDeutsch').value.trim();
+
+        if (!deutsch || (!kanji && !furigana)) {
+            document.getElementById('addFeedback').innerText = 'Bitte füllen Sie die Bedeutung und mindestens Kanji oder Kana aus!';
+            document.getElementById('addFeedback').style.color = 'var(--danger)';
+            return;
+        }
+
+        let btn = document.getElementById('btnSubmitWord');
+        btn.innerText = 'Speichere...';
+        btn.disabled = true;
+
+        fetch(SCRIPT_URL, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify({ action: 'addWord', kanji: kanji, furigana: furigana, deutsch: deutsch })
+        }).then(() => {
+            document.getElementById('addFeedback').innerText = 'Wort erfolgreich hinzugefügt!';
+            document.getElementById('addFeedback').style.color = 'var(--success)';
+            document.getElementById('addKanji').value = '';
+            document.getElementById('addFurigana').value = '';
+            document.getElementById('addDeutsch').value = '';
+            setTimeout(() => {
+                document.getElementById('addFeedback').innerText = '';
+                loadVocabulary().then(renderWorterverzeichnis);
+            }, 1500);
+        }).finally(() => {
+            btn.innerText = 'Zur Liste hinzufügen';
+            btn.disabled = false;
+        });
+    });
+
+    document.getElementById('btnCancelEdit').addEventListener('click', () => {
+        document.getElementById('modalEdit').style.display = 'none';
+    });
+
+    document.getElementById('btnSaveEdit').addEventListener('click', () => {
+        let rowIndex = document.getElementById('editRowIndex').value;
+        let payload = {
+            action: 'editWord',
+            rowIndex: rowIndex,
+            kanji: document.getElementById('editKanji').value.trim(),
+            furigana: document.getElementById('editFurigana').value.trim(),
+            deutsch: document.getElementById('editDeutsch').value.trim()
+        };
+        
+        document.getElementById('btnSaveEdit').innerText = 'Speichere...';
+        
+        fetch(SCRIPT_URL, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify(payload)
+        }).then(() => {
+            document.getElementById('modalEdit').style.display = 'none';
+            document.getElementById('btnSaveEdit').innerText = 'Speichern';
+            loadVocabulary().then(renderWorterverzeichnis);
+        });
+    });
+
+    // Globale Funktionen für das Inline-HTML onclick
+    window.deleteWord = function(rowIndex) {
+        if (!confirm("Möchten Sie dieses Wort wirklich löschen?")) return;
+        fetch(SCRIPT_URL, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify({ action: 'deleteWord', rowIndex: rowIndex })
+        }).then(() => loadVocabulary().then(renderWorterverzeichnis));
+    };
+
+    window.openEditModal = function(rowIndex) {
+        let vok = alleVokabeln.find(v => v.rowIndex === rowIndex);
+        if (!vok) return;
+        document.getElementById('editRowIndex').value = rowIndex;
+        document.getElementById('editKanji').value = vok['Kanji'] || '';
+        document.getElementById('editFurigana').value = vok['Furigana'] || '';
+        document.getElementById('editDeutsch').value = vok['Deutsch'] || '';
+        document.getElementById('modalEdit').style.display = 'block';
+    };
+
+    // App initial starten (im Hintergrund laden)
+    loadVocabulary();
 });
 
-// --- DATEN LADEN ---
+// --- FUNKTIONEN (Außerhalb des DOMContentLoaded für Übersichtlichkeit) ---
 async function loadVocabulary() {
     try {
         document.getElementById('loadingMsg').style.display = 'block';
@@ -123,25 +235,20 @@ async function loadVocabulary() {
         
         alleVokabeln = await response.json();
         
-        if (viewLernen.style.display === 'block') {
+        if (document.getElementById('viewLernen').style.display === 'block') {
             vokabeltrainerStarten();
         }
     } catch (error) {
-        document.getElementById('loadingMsg').innerHTML = "Fehler beim Laden der Daten.<br>Bitte überprüfen Sie Ihre Internetverbindung.";
+        document.getElementById('loadingMsg').innerHTML = "Fehler beim Laden der Daten.";
     }
 }
 
-// --- LERNFORTSCHRITT (LOCAL STORAGE) ---
 function updateDailyProgress() {
     const today = new Date().toISOString().split('T')[0];
     let savedProgress = JSON.parse(localStorage.getItem('japTrainerProgress')) || { date: '', done: 0, total: 0 };
     
-    // Neuer Tag -> Reset
-    if (savedProgress.date !== today) {
-        savedProgress = { date: today, done: 0, total: todayTotal };
-    }
+    if (savedProgress.date !== today) savedProgress = { date: today, done: 0, total: todayTotal };
     
-    // Falls Session weitergeht, addiere Fortschritt
     if (todayDone > savedProgress.done) {
         savedProgress.done = todayDone;
         savedProgress.total = todayTotal;
@@ -151,27 +258,18 @@ function updateDailyProgress() {
     }
 
     const percent = todayTotal > 0 ? Math.round((todayDone / todayTotal) * 100) : 0;
-    const text = document.getElementById('dailyProgressText');
-    const fill = document.getElementById('dailyProgressFill');
-    
     document.getElementById('dailyProgressContainer').style.display = 'block';
-    if (text) text.innerText = percent + '%';
-    if (fill) fill.style.width = percent + '%';
+    document.getElementById('dailyProgressText').innerText = percent + '%';
+    document.getElementById('dailyProgressFill').style.width = percent + '%';
 }
 
 function resetDailyProgress() {
     const today = new Date().toISOString().split('T')[0];
     let savedProgress = JSON.parse(localStorage.getItem('japTrainerProgress')) || { date: '', done: 0 };
-    
-    if (savedProgress.date === today) {
-        todayDone = savedProgress.done; // Lade Fortschritt von heute
-    } else {
-        todayDone = 0; // Neuer Tag
-    }
+    todayDone = (savedProgress.date === today) ? savedProgress.done : 0;
     updateDailyProgress();
 }
 
-// --- LERNLOGIK ---
 function vokabeltrainerStarten() {
     let heute = new Date();
     heute.setHours(0,0,0,0);
@@ -180,8 +278,7 @@ function vokabeltrainerStarten() {
     alleVokabeln.forEach(vok => {
         let letztesTrainingStr = vok['Datum des letzten Trainings'] || vok['Letztes Training'];
         if (letztesTrainingStr) {
-            let letzesDatum = new Date(letztesTrainingStr);
-            if (letzesDatum < heute) {
+            if (new Date(letztesTrainingStr) < heute) {
                 vok['Status JA-->DE'] = "";
                 vok['Status DE-->JA'] = "";
                 vok['Datum des letzten Trainings'] = "";
@@ -200,15 +297,14 @@ function vokabeltrainerStarten() {
         }
     });
 
-    todayTotal = faelligeAufgaben.length + todayDone; // Gesamtziel anpassen
+    todayTotal = faelligeAufgaben.length + todayDone;
     resetDailyProgress();
 
     if (faelligeAufgaben.length === 0) {
-        document.getElementById('loadingMsg').innerHTML = "<b>Super!</b><br>Du hast für heute alle fälligen Vokabeln erfolgreich gelernt.";
+        document.getElementById('loadingMsg').innerHTML = "<b>Super!</b><br>Du hast für heute alles gelernt.";
         return;
     }
 
-    // Mischen
     for (let i = faelligeAufgaben.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
         [faelligeAufgaben[i], faelligeAufgaben[j]] = [faelligeAufgaben[j], faelligeAufgaben[i]];
@@ -224,7 +320,7 @@ function naechsteVokabel() {
     if (vokabelIndex >= faelligeAufgaben.length) {
         document.getElementById('trainerApp').style.display = 'none';
         document.getElementById('loadingMsg').style.display = 'block';
-        document.getElementById('loadingMsg').innerHTML = "<b>Fertig!</b><br>Du hast alle fälligen Aufgaben für heute gelernt!";
+        document.getElementById('loadingMsg').innerHTML = "<b>Fertig!</b><br>Alle fälligen Aufgaben gelernt!";
         return;
     }
 
@@ -254,61 +350,6 @@ function naechsteVokabel() {
     }
 }
 
-document.getElementById('btnCheck').addEventListener('click', function() {
-    if (richtung === 0) {
-        document.getElementById('modalLoesung').innerText = loesung;
-        document.getElementById('modalAuswertung').style.display = 'block';
-    } else {
-        if (this.innerText === 'Weiter') {
-            this.innerText = 'Prüfen';
-            document.getElementById('translation').disabled = false;
-            verarbeiteAntwort(false);
-            return;
-        }
-
-        let eingabe = document.getElementById('translation').value.trim();
-        if (eingabe === '') return;
-
-        let vok = faelligeAufgaben[vokabelIndex].data;
-        if (eingabe === loesung || eingabe === vok['Furigana']) {
-            document.getElementById('feedback').innerText = 'Richtig!';
-            document.getElementById('feedback').style.color = 'green';
-            setTimeout(() => verarbeiteAntwort(true), 1000);
-        } else {
-            document.getElementById('feedback').innerText = `Falsch! Richtig ist:\n${vok['Furigana'] ? vok['Furigana'] : ''}\n${loesung}`;
-            document.getElementById('feedback').style.color = 'red';
-            document.getElementById('translation').disabled = true;
-            this.innerText = 'Weiter';
-        }
-    }
-});
-
-document.getElementById('btnModalGewusst').addEventListener('click', function() {
-    document.getElementById('modalAuswertung').style.display = 'none';
-    verarbeiteAntwort(true);
-});
-
-document.getElementById('btnModalFalsch').addEventListener('click', function() {
-    document.getElementById('modalAuswertung').style.display = 'none';
-    verarbeiteAntwort(false);
-});
-
-document.getElementById('btnFurigana').addEventListener('click', function() {
-    document.getElementById('furigana').innerText = faelligeAufgaben[vokabelIndex].data['Furigana'];
-});
-
-document.getElementById('btnCancel').addEventListener('click', function() {
-    vokabelIndex++;
-    naechsteVokabel();
-});
-
-document.getElementById('translation').addEventListener('keypress', function(event) {
-    if (event.key === 'Enter') {
-        event.preventDefault();
-        document.getElementById('btnCheck').click();
-    }
-});
-
 function verarbeiteAntwort(warRichtig) {
     let aufgabe = faelligeAufgaben[vokabelIndex];
     let vok = aufgabe.data;
@@ -329,21 +370,13 @@ function verarbeiteAntwort(warRichtig) {
 
     let stat0 = vok['Status JA-->DE'];
     let stat1 = vok['Status DE-->JA'];
-
-    let updates = {
-        rowIndex: aktuelleZeile,
-        statusJA: stat0,
-        statusDE: stat1,
-        letztesTraining: vok['Datum des letzten Trainings']
-    };
+    let updates = { rowIndex: aktuelleZeile, statusJA: stat0, statusDE: stat1, letztesTraining: vok['Datum des letzten Trainings'] };
 
     if ((stat0 === 1 || stat0 === 3) && (stat1 === 1 || stat1 === 3)) {
         let fach = parseInt(vok['Fach']) || 1;
-        if (stat0 === 1 && stat1 === 1) {
-            if (fach < 5) fach++;
-        } else {
-            if (fach > 1) fach--;
-        }
+        if (stat0 === 1 && stat1 === 1) { if (fach < 5) fach++; } 
+        else { if (fach > 1) fach--; }
+        
         let tage = [0, 1, 3, 7, 14, 30][fach];
         let neuesDatum = new Date();
         neuesDatum.setDate(neuesDatum.getDate() + tage);
@@ -353,12 +386,8 @@ function verarbeiteAntwort(warRichtig) {
         updates.statusJA = '';
         updates.statusDE = '';
         updates.letztesTraining = '';
-        
-        vok['Fach'] = fach;
-        vok['Naechste Abfrage'] = updates.naechsteAbfrage;
     }
 
-    // Backend Update via POST
     fetch(SCRIPT_URL, {
         method: 'POST',
         mode: 'no-cors',
@@ -370,19 +399,14 @@ function verarbeiteAntwort(warRichtig) {
     naechsteVokabel();
 }
 
-// --- DIAGRAMM LERNFORTSCHRITT ---
 function renderFortschrittChart() {
     const chartContainer = document.getElementById('chartContainer');
     chartContainer.innerHTML = ''; 
-    
     let levelCounts = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
-    let gesamt = alleVokabeln.length;
     
     alleVokabeln.forEach(vok => {
         let fach = parseInt(vok['Fach']) || 1;
-        if (levelCounts[fach] !== undefined) {
-            levelCounts[fach]++;
-        }
+        if (levelCounts[fach] !== undefined) levelCounts[fach]++;
     });
     
     const maxCount = Math.max(...Object.values(levelCounts), 1);
@@ -390,62 +414,16 @@ function renderFortschrittChart() {
     for (let i = 1; i <= 5; i++) {
         let count = levelCounts[i];
         let heightPercent = (count / maxCount) * 100;
-        let anteil = gesamt > 0 ? Math.round((count / gesamt) * 100) : 0;
-        
-        let barHtml = `
+        chartContainer.innerHTML += `
             <div style="display: flex; align-items: center; margin-bottom: 15px;">
                 <div style="width: 60px; font-weight: bold;">Level ${i}</div>
-                <div style="flex-grow: 1; background: #eee; height: 25px; border-radius: 5px; overflow: hidden; margin: 0 10px;">
-                    <div style="width: ${heightPercent}%; background: var(--primary-color); height: 100%; transition: width 0.5s;"></div>
+                <div style="flex-grow: 1; background: #E5E7EB; height: 25px; border-radius: 5px; overflow: hidden; margin: 0 10px;">
+                    <div style="width: ${heightPercent}%; background: var(--primary); height: 100%; transition: width 0.5s;"></div>
                 </div>
-                <div style="width: 40px; text-align: right; font-size: 14px; color: #666;">${count}</div>
-            </div>
-        `;
-        chartContainer.innerHTML += barHtml;
+                <div style="width: 40px; text-align: right; font-size: 14px; color: var(--text-muted);">${count}</div>
+            </div>`;
     }
 }
-
-// --- WÖRTERVERZEICHNIS CRUD ---
-document.getElementById('btnSubmitWord').addEventListener('click', function() {
-    let kanji = document.getElementById('addKanji').value.trim();
-    let furigana = document.getElementById('addFurigana').value.trim();
-    let deutsch = document.getElementById('addDeutsch').value.trim();
-
-    if (!deutsch || (!kanji && !furigana)) {
-        document.getElementById('addFeedback').innerText = 'Bitte füllen Sie die Bedeutung und mindestens Kanji oder Kana aus!';
-        document.getElementById('addFeedback').style.color = 'red';
-        return;
-    }
-
-    let btn = document.getElementById('btnSubmitWord');
-    btn.innerText = 'Speichere...';
-    btn.disabled = true;
-
-    let payload = { action: 'addWord', kanji: kanji, furigana: furigana, deutsch: deutsch };
-
-    fetch(SCRIPT_URL, {
-        method: 'POST',
-        mode: 'no-cors',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify(payload)
-    }).then(() => {
-        document.getElementById('addFeedback').innerText = 'Wort erfolgreich hinzugefügt!';
-        document.getElementById('addFeedback').style.color = 'green';
-        document.getElementById('addKanji').value = '';
-        document.getElementById('addFurigana').value = '';
-        document.getElementById('addDeutsch').value = '';
-        setTimeout(() => {
-            document.getElementById('addFeedback').innerText = '';
-            loadVocabulary().then(renderWorterverzeichnis);
-        }, 1500);
-    }).catch(() => {
-        document.getElementById('addFeedback').innerText = 'Fehler beim Speichern!';
-        document.getElementById('addFeedback').style.color = 'red';
-    }).finally(() => {
-        btn.innerText = 'Zur Liste hinzufügen';
-        btn.disabled = false;
-    });
-});
 
 function renderWorterverzeichnis() {
     const container = document.getElementById('worterListe');
@@ -457,70 +435,14 @@ function renderWorterverzeichnis() {
         div.style.margin = '10px 0';
         div.innerHTML = `
             <div style="font-size: 18px; font-weight: bold; margin-bottom: 5px;">${vok['Deutsch'] || '-'}</div>
-            <div style="color: #666; margin-bottom: 15px; font-size: 14px;">
+            <div style="color: var(--text-muted); margin-bottom: 15px; font-size: 14px;">
                 Kanji: ${vok['Kanji'] || '-'} | Kana: ${vok['Furigana'] || '-'}
             </div>
             <div style="display: flex; gap: 10px;">
                 <button onclick="openEditModal(${vok.rowIndex})" class="btn-secondary" style="margin: 0; padding: 10px;">✏️ Ändern</button>
-                <button onclick="deleteWord(${vok.rowIndex})" class="btn-secondary" style="margin: 0; padding: 10px; background: #ffebee; color: #d32f2f;">🗑️ Löschen</button>
+                <button onclick="deleteWord(${vok.rowIndex})" class="btn-secondary" style="margin: 0; padding: 10px; background: #FEE2E2; color: var(--danger);">🗑️ Löschen</button>
             </div>
         `;
         container.appendChild(div);
     });
 }
-
-window.deleteWord = function(rowIndex) {
-    if (!confirm("Möchten Sie dieses Wort wirklich dauerhaft löschen?")) return;
-    
-    fetch(SCRIPT_URL, {
-        method: 'POST',
-        mode: 'no-cors',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify({ action: 'deleteWord', rowIndex: rowIndex })
-    }).then(() => {
-        loadVocabulary().then(renderWorterverzeichnis);
-    });
-};
-
-window.openEditModal = function(rowIndex) {
-    let vok = alleVokabeln.find(v => v.rowIndex === rowIndex);
-    if (!vok) return;
-    
-    document.getElementById('editRowIndex').value = rowIndex;
-    document.getElementById('editKanji').value = vok['Kanji'] || '';
-    document.getElementById('editFurigana').value = vok['Furigana'] || '';
-    document.getElementById('editDeutsch').value = vok['Deutsch'] || '';
-    
-    document.getElementById('modalEdit').style.display = 'block';
-};
-
-document.getElementById('btnCancelEdit').addEventListener('click', () => {
-    document.getElementById('modalEdit').style.display = 'none';
-});
-
-document.getElementById('btnSaveEdit').addEventListener('click', () => {
-    let rowIndex = document.getElementById('editRowIndex').value;
-    let payload = {
-        action: 'editWord',
-        rowIndex: rowIndex,
-        kanji: document.getElementById('editKanji').value.trim(),
-        furigana: document.getElementById('editFurigana').value.trim(),
-        deutsch: document.getElementById('editDeutsch').value.trim()
-    };
-    
-    document.getElementById('btnSaveEdit').innerText = 'Speichere...';
-    
-    fetch(SCRIPT_URL, {
-        method: 'POST',
-        mode: 'no-cors',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify(payload)
-    }).then(() => {
-        document.getElementById('modalEdit').style.display = 'none';
-        document.getElementById('btnSaveEdit').innerText = 'Speichern';
-        loadVocabulary().then(renderWorterverzeichnis);
-    });
-});
-
-// App initial starten
-loadVocabulary();
