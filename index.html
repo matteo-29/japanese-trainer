@@ -3,211 +3,133 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Japanisch Vokabeltrainer</title>
-    <link rel="manifest" href="manifest.json">
-    <script>
-      if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => navigator.serviceWorker.register('sw.js'));
-      }
-    </script>
+    <title>日本語 Trainer</title>
     <style>
         :root {
-            --primary: #4F46E5;
-            --primary-hover: #4338CA;
-            --bg: #F3F4F6;
-            --surface: #FFFFFF;
-            --text-main: #1F2937;
-            --text-muted: #6B7280;
-            --success: #10B981;
-            --danger: #EF4444;
+            --primary-color: #4CAF50;
+            --secondary-color: #2196F3;
+            --bg-color: #f4f4f9;
+            --text-color: #333;
         }
-        body { 
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
-            background-color: var(--bg); color: var(--text-main);
-            margin: 0; padding: 0 0 70px 0; text-align: center;
-        }
-        header {
-            background: var(--primary); color: white; padding: 15px 0; font-size: 20px; font-weight: bold;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px;
-        }
-        .card { 
-            background: var(--surface); border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); 
-            padding: 30px 20px; max-width: 90%; margin: 0 auto 20px auto; 
-        }
-        #furigana { font-size: 16px; color: var(--text-muted); min-height: 24px; margin-bottom: 5px; }
-        #kanji { font-size: 42px; font-weight: bold; margin-bottom: 25px; color: var(--text-main); }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; background-color: var(--bg-color); color: var(--text-color); padding-bottom: 20px; }
+        header { background: var(--primary-color); color: white; padding: 15px; text-align: center; font-size: 20px; font-weight: bold; position: sticky; top: 0; z-index: 100; }
+        .card { background: white; padding: 20px; margin: 15px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .btn-primary, .btn-secondary { padding: 15px; border: none; border-radius: 8px; cursor: pointer; font-size: 16px; font-weight: bold; margin-bottom: 10px; width: 100%; box-sizing: border-box; }
+        .btn-primary { background: var(--primary-color); color: white; }
+        .btn-secondary { background: #e0e0e0; color: #333; }
+        input[type="text"] { width: 100%; padding: 12px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; font-size: 16px; }
         
-        input[type="text"] { 
-            width: 100%; padding: 14px; margin-bottom: 15px; font-size: 16px; 
-            border: 1px solid #D1D5DB; border-radius: 10px; box-sizing: border-box;
-            background: #F9FAFB; transition: border 0.2s;
-        }
-        input[type="text"]:focus { outline: none; border-color: var(--primary); background: #FFF; }
+        #furigana { font-size: 14px; color: #666; text-align: center; min-height: 20px; margin-bottom: 5px; }
+        #kanji { font-size: 48px; text-align: center; margin-bottom: 20px; }
         
-        button { 
-            padding: 12px 20px; margin: 5px; font-size: 15px; border: none; border-radius: 10px; 
-            font-weight: 600; cursor: pointer; transition: transform 0.1s, opacity 0.2s;
-        }
-        button:active { transform: scale(0.96); }
+        /* Modal Styles */
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; }
+        .modal-content { background: white; margin: 20% auto; padding: 20px; width: 85%; border-radius: 10px; text-align: center; }
         
-        .btn-primary { background-color: var(--primary); color: white; width: 100%; }
-        .btn-secondary { background-color: #E5E7EB; color: var(--text-main); }
-        .btn-success { background-color: var(--success); color: white; width: 45%; }
-        .btn-danger { background-color: var(--danger); color: white; width: 45%; }
-        
-        /* Bottom Navigation */
-        .bottom-nav {
-            position: fixed; bottom: 0; left: 0; width: 100%; background: var(--surface);
-            display: flex; border-top: 1px solid #E5E7EB; padding-bottom: env(safe-area-inset-bottom);
-        }
-        .nav-item {
-            flex: 1; padding: 15px 0; font-size: 14px; font-weight: bold; color: var(--text-muted);
-            background: none; border: none; cursor: pointer; border-radius: 0; margin: 0;
-        }
-        .nav-item.active { color: var(--primary); border-top: 3px solid var(--primary); padding-top: 12px; }
-        
-        #modalAuswertung {
-            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
-            background: rgba(0,0,0,0.5); backdrop-filter: blur(3px); z-index: 1000;
-        }
-        .modal-content {
-            background: white; margin: 40% auto; padding: 30px; width: 85%; max-width: 320px; 
-            border-radius: 16px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.2);
-        }
-		/* Styling für den Ladekreis */
-		.spinner-container {
-			display: flex;
-			flex-direction: column;
-			align-items: center;
-			justify-content: center;
-			margin-top: 50px;
-		}
-		.spinner {
-			width: 60px;
-			height: 60px;
-			border: 6px solid #E5E7EB;
-			border-top: 6px solid #38BDF8;
-			border-radius: 50%;
-			animation: spin 1s linear infinite;
-			margin-bottom: 15px;
-		}
-		@keyframes spin {
-			0% { transform: rotate(0deg); }
-			100% { transform: rotate(360deg); }
-		}
-		.modal-loesung {
-			font-size: clamp(18px, 6vw, 32px);
-			margin: 15px 0;
-			line-height: 1.2;
-			word-break: break-word;
-			overflow-wrap: break-word;
-		}
-
-        .daily-progress {
-            margin-top: 18px;
-            width: 100%;
-        }
-
-        .daily-progress-top {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-size: 14px;
-            font-weight: 600;
-            color: #374151;
-            margin-bottom: 8px;
-        }
-
-        .daily-progress-bar {
-            width: 100%;
-            height: 14px;
-            background: #e5e7eb;
-            border-radius: 999px;
-            overflow: hidden;
-            box-shadow: inset 0 1px 2px rgba(0,0,0,0.08);
-        }
-
-        .daily-progress-fill {
-            width: 0%;
-            height: 100%;
-            background: linear-gradient(90deg, #60a5fa, #2563eb);
-            border-radius: 999px;
-            transition: width 0.3s ease;
-        }
-
-        .daily-progress-text {
-            min-width: 44px;
-            text-align: right;
-        }
+        /* Spinner */
+        .spinner { border: 4px solid #f3f3f3; border-top: 4px solid var(--primary-color); border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto 10px auto; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
-    <header>日本語 Trainer</header>
+
+<header>
+    <button id="btnBackToMenu" style="display: none; background: none; border: none; color: white; font-size: 20px; cursor: pointer; position: absolute; left: 15px; top: 15px; padding: 0;">⬅️</button>
+    日本語 Trainer
+</header>
+
+<!-- ANSICHT 0: HAUPTMENÜ -->
+<div id="viewMenu" style="padding: 20px; text-align: center;">
+    <h2 style="margin-bottom: 30px;">Hauptmenü</h2>
+    <button id="btnStartLernen" class="btn-primary" style="padding: 20px; font-size: 18px;">▶️ Start</button>
+    <button id="btnLernfortschritt" class="btn-secondary" style="padding: 20px; font-size: 18px;">📊 Lernfortschritt</button>
+    <button id="btnWorterverzeichnis" class="btn-secondary" style="padding: 20px; font-size: 18px;">📖 Wörterverzeichnis</button>
+</div>
+
+<!-- ANSICHT 1: LERNEN -->
+<div id="viewLernen" style="display: none;">
+    <div id="loadingMsg" style="text-align: center; margin-top: 50px;">
+        <div class="spinner"></div>
+        <div style="font-size: 16px; color: #666;">Lade Vokabeln aus der Cloud...</div>
+    </div>
     
-    <!-- ANSICHT 1: LERNEN -->
-    <div id="viewLernen">
-        <div id="loadingMsg" class="spinner-container">
-            <div class="spinner"></div>
-            <div style="font-size: 16px; color: var(--text-muted);">Lade Vokabeln aus der Cloud...</div>
-        </div>
+    <div class="card" id="trainerApp" style="display: none;">
+        <div id="furigana"></div>
+        <div id="kanji"></div>
         
-        <div class="card" id="trainerApp" style="display: none;">
-            <div id="furigana"></div>
-            <div id="kanji"></div>
-            
-            <input type="text" id="translation" placeholder="Antwort eingeben..." autocomplete="off">
-            <p id="feedback" style="font-weight: bold; min-height: 20px; margin-top: 5px;"></p>
-            
-            <div style="display: flex; gap: 10px; margin-top: 15px;">
-                <button class="btn-secondary" id="btnCancel" style="flex: 1;">Überspringen</button>
-                <button class="btn-secondary" id="btnFurigana" style="flex: 1; display: none;">Furigana</button>
-            </div>
-            <button class="btn-primary" id="btnCheck" style="margin-top: 10px;">Prüfen</button>
-
-            <div class="daily-progress">
-                <div class="daily-progress-top">
-                    <span>Heutiger Fortschritt</span>
-                    <span id="dailyProgressText" class="daily-progress-text">0%</span>
-                </div>
-                <div class="daily-progress-bar">
-                    <div id="dailyProgressFill" class="daily-progress-fill"></div>
-                </div>
-            </div>
+        <input type="text" id="translation" placeholder="Antwort eingeben..." autocomplete="off">
+        <p id="feedback" style="font-weight: bold; text-align: center; min-height: 20px;"></p>
+        
+        <div style="display: flex; gap: 10px; margin-top: 15px;">
+            <button class="btn-secondary" id="btnCancel" style="flex: 1;">Überspringen</button>
+            <button class="btn-secondary" id="btnFurigana" style="flex: 1; display: none;">Furigana</button>
         </div>
+        <button class="btn-primary" id="btnCheck" style="margin-top: 10px;">Prüfen</button>
     </div>
 
-    <!-- ANSICHT 2: WORT HINZUFÜGEN -->
-    <div id="viewAdd" style="display: none;">
-        <div class="card">
-            <h2 style="margin-top: 0; color: var(--primary);">Neues Wort</h2>
-            <input type="text" id="addKanji" placeholder="Kanji (z.B. 猫)" autocomplete="off">
-            <input type="text" id="addFurigana" placeholder="Kana/Furigana (z.B. ねこ)" autocomplete="off">
-            <input type="text" id="addDeutsch" placeholder="Bedeutung (z.B. Katze)" autocomplete="off">
-            
-            <button class="btn-primary" id="btnSubmitWord" style="margin-top: 10px;">Zur Liste hinzufügen</button>
-            <p id="addFeedback" style="font-weight: bold; margin-top: 15px;"></p>
+    <!-- Tägliche Fortschrittsanzeige unter dem Trainer -->
+    <div class="card" id="dailyProgressContainer" style="display: none; text-align: center;">
+        <h3>Heutiger Fortschritt</h3>
+        <div style="background: #e0e0e0; border-radius: 10px; height: 20px; width: 100%; margin: 10px 0; overflow: hidden;">
+            <div id="dailyProgressFill" style="background: var(--primary-color); height: 100%; width: 0%; transition: width 0.3s;"></div>
         </div>
+        <div id="dailyProgressText">0%</div>
+    </div>
+</div>
+
+<!-- ANSICHT 2: LERNFORTSCHRITT -->
+<div id="viewFortschritt" style="display: none; padding: 20px;">
+    <h2>Lernfortschritt (Level)</h2>
+    <div class="card" id="chartContainer" style="margin-top: 20px;">
+        <!-- Diagramm wird per JS generiert -->
+    </div>
+</div>
+
+<!-- ANSICHT 3: WÖRTERVERZEICHNIS -->
+<div id="viewVerzeichnis" style="display: none; padding: 10px;">
+    <div class="card">
+        <h3 style="margin-top: 0;">Neues Wort hinzufügen</h3>
+        <input type="text" id="addKanji" placeholder="Kanji (optional)">
+        <input type="text" id="addFurigana" placeholder="Kana (optional)">
+        <input type="text" id="addDeutsch" placeholder="Bedeutung (Pflicht)">
+        <p id="addFeedback" style="font-weight: bold; min-height: 20px; font-size: 14px;"></p>
+        <button class="btn-primary" id="btnSubmitWord">Zur Liste hinzufügen</button>
     </div>
 
-    <!-- MODAL FÜR JA->DE -->
-    <div id="modalAuswertung">
-        <div class="modal-content">
-            <p style="color: var(--text-muted); margin: 0;">Die Lösung ist:</p>
-            <h2 id="modalLoesung" class="modal-loesung"></h2>
-            <p style="margin-bottom: 20px; font-weight: bold;">Gewusst?</p>
-            <div style="display: flex; justify-content: space-between;">
-                <button class="btn-success" id="btnModalGewusst">Richtig</button>
-                <button class="btn-danger" id="btnModalFalsch">Falsch</button>
-            </div>
+    <h3 style="padding: 0 15px;">Gespeicherte Vokabeln</h3>
+    <div id="worterListe">
+        <!-- Liste wird per JS generiert -->
+    </div>
+</div>
+
+<!-- MODAL: AUSWERTUNG BEIM LERNEN -->
+<div id="modalAuswertung" class="modal">
+    <div class="modal-content">
+        <h3>Die Lösung ist:</h3>
+        <p id="modalLoesung" style="font-size: 24px; font-weight: bold; margin: 20px 0;"></p>
+        <p>Gewusst?</p>
+        <div style="display: flex; gap: 10px; margin-top: 20px;">
+            <button class="btn-primary" id="btnModalGewusst" style="flex: 1;">Richtig</button>
+            <button class="btn-secondary" id="btnModalFalsch" style="flex: 1; background: #f44336; color: white;">Falsch</button>
         </div>
     </div>
+</div>
 
-    <!-- NAVIGATION UNTEN -->
-    <nav class="bottom-nav">
-        <button class="nav-item active" id="navLernen">🎓 Lernen</button>
-        <button class="nav-item" id="navAdd">➕ Hinzufügen</button>
-    </nav>
+<!-- MODAL: WORT BEARBEITEN -->
+<div id="modalEdit" class="modal">
+    <div class="modal-content">
+        <h3>Wort bearbeiten</h3>
+        <input type="hidden" id="editRowIndex">
+        <input type="text" id="editKanji" placeholder="Kanji">
+        <input type="text" id="editFurigana" placeholder="Kana">
+        <input type="text" id="editDeutsch" placeholder="Bedeutung">
+        <div style="display: flex; gap: 10px; margin-top: 15px;">
+            <button class="btn-primary" id="btnSaveEdit" style="flex: 1;">Speichern</button>
+            <button class="btn-secondary" id="btnCancelEdit" style="flex: 1;">Abbrechen</button>
+        </div>
+    </div>
+</div>
 
-    <script src="app.js"></script>
+<script src="app-5.js"></script>
 </body>
 </html>
