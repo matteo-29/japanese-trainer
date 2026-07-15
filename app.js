@@ -368,19 +368,27 @@ ${loesung}`;
 });
 
 async function loadVocabulary(forLearning = false) {
+    const loadingMsg = document.getElementById('loadingMsg');
+    const trainerApp = document.getElementById('trainerApp');
+    const categorySelection = document.getElementById('categorySelection');
     try {
-        const loadingMsg = document.getElementById('loadingMsg');
-        const trainerApp = document.getElementById('trainerApp');
-        const categorySelection = document.getElementById('categorySelection');
-        if (loadingMsg) loadingMsg.style.display = 'block';
+        if (loadingMsg) {
+            loadingMsg.style.display = 'block';
+            loadingMsg.innerHTML = '<div class="spinner"></div><div style="font-size: 16px; color: var(--text-muted);">Lade Vokabeln aus der Cloud...</div>';
+        }
         if (trainerApp) trainerApp.style.display = 'none';
         if (categorySelection) categorySelection.style.display = 'none';
 
-        let response = await fetch(SCRIPT_URL, { method: 'GET' });
-        if (!response.ok) throw new Error('HTTP Fehler');
+        let response = await fetch(SCRIPT_URL, { method: 'GET', cache: 'no-store' });
+        if (!response.ok) throw new Error('HTTP Fehler ' + response.status);
 
-        alleVokabeln = await response.json();
-        alleVokabeln = alleVokabeln.map(vok => ({ ...vok, Kategorie: normalizeKategorie(vok['Kategorie'] || vok['kategorie'] || vok['Kategorie '.trim()]) }));
+        const data = await response.json();
+        if (!Array.isArray(data)) throw new Error('Antwort ist kein JSON-Array');
+
+        alleVokabeln = data.map(vok => ({
+            ...vok,
+            Kategorie: normalizeKategorie(vok['Kategorie'] || vok['kategorie'] || '')
+        }));
         fillKategorieSelects();
 
         if (forLearning || document.getElementById('viewLernen').style.display === 'block') {
@@ -389,8 +397,15 @@ async function loadVocabulary(forLearning = false) {
             if (categorySelection) categorySelection.style.display = 'block';
             if (loadingMsg) loadingMsg.style.display = 'none';
         }
+
+        return alleVokabeln;
     } catch (error) {
-        console.error('Fehler beim Laden der Daten:', error); document.getElementById('loadingMsg').innerHTML = 'Fehler beim Laden der Daten. Prüfe Apps-Script-Deployment, JSON-Antwort und Browser-Konsole.';
+        console.error('Fehler beim Laden der Daten:', error);
+        if (loadingMsg) {
+            loadingMsg.style.display = 'block';
+            loadingMsg.innerHTML = 'Fehler beim Laden der Daten.<br>Prüfe Apps-Script-Deployment, JSON-Antwort und Konsole.';
+        }
+        throw error;
     }
 }
 
