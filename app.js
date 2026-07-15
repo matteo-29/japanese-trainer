@@ -1,5 +1,5 @@
 // TRAGEN SIE HIER IHRE GOOGLE APPS SCRIPT URL EIN
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbweRvIaqV1cRumvWSeHErTdjMREcCr1s53AUX5ZcSfpPqF9yr67NRjTrB7qYdrHygipuQ/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxuRUhweiYah6225ru9sL8UU3WLhzfooa-71B5S7jZD_idOD3-c80BNtkj_HQb2DmqMwg/exec';
 
 const KATEGORIEN = ['Business/Arbeit','Reise','Zu Hause','Doktor','Familie','Essen','Schule','Freizeit','Alltag','Sonstiges'];
 
