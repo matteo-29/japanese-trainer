@@ -90,7 +90,21 @@
         <div class="spinner"></div>
         <div style="font-size: 16px; color: var(--text-muted);">Lade Vokabeln aus der Cloud...</div>
     </div>
-    
+	
+    <!-- KATEGORIEAUSWAHL -->
+	<div id="categorySelection" style="display: none; padding: 0 15px 15px;">
+		<div class="card" style="margin: 15px 0 0;">
+			<h2 style="margin-top: 0;">Kategorie wählen</h2>
+			<p style="color: var(--text-muted); margin-bottom: 0;">
+				Wähle die Kategorie, deren Vokabeln du lernen möchtest.
+			</p>
+
+			<div id="categoryGrid" class="category-grid"></div>
+		</div>
+	</div>
+
+	<p id="activeCategoryLabel" class="category-active" style="display: none;"></p>
+	
     <div class="card" id="trainerApp" style="display: none;">
         <div id="furigana"></div>
         <div id="kanji"></div>
