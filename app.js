@@ -31,7 +31,7 @@ function normalizeKategorie(value) {
         'alltag': 'Alltag',
         'sonstiges': 'Sonstiges'
     };
-    return map[lower] || raw;
+    return KATEGORIEN.includes(raw) ? raw : (map[lower] || 'Sonstiges');
 }
 
 function buildKategorieOptions(selected = 'Sonstiges') {
@@ -380,7 +380,7 @@ async function loadVocabulary(forLearning = false) {
         if (!response.ok) throw new Error('HTTP Fehler');
 
         alleVokabeln = await response.json();
-        alleVokabeln = alleVokabeln.map(vok => ({ ...vok, Kategorie: normalizeKategorie(vok['Kategorie']) }));
+        alleVokabeln = alleVokabeln.map(vok => ({ ...vok, Kategorie: normalizeKategorie(vok['Kategorie'] || vok['kategorie'] || vok['Kategorie '.trim()]) }));
         fillKategorieSelects();
 
         if (forLearning || document.getElementById('viewLernen').style.display === 'block') {
@@ -390,7 +390,7 @@ async function loadVocabulary(forLearning = false) {
             if (loadingMsg) loadingMsg.style.display = 'none';
         }
     } catch (error) {
-        document.getElementById('loadingMsg').innerHTML = 'Fehler beim Laden der Daten.';
+        console.error('Fehler beim Laden der Daten:', error); document.getElementById('loadingMsg').innerHTML = 'Fehler beim Laden der Daten. Prüfe Apps-Script-Deployment, JSON-Antwort und Browser-Konsole.';
     }
 }
 

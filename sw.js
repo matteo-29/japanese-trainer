@@ -1,4 +1,4 @@
-const CACHE_NAME = 'jap-trainer-v11'; // Versionsnummer erhöht!
+const CACHE_NAME = 'jap-trainer-v10'; // Versionsnummer erhöht!
 const urlsToCache = [
   './',
   './index.html',
