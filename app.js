@@ -1,6 +1,8 @@
 // TRAGEN SIE HIER IHRE GOOGLE APPS SCRIPT URL EIN
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbweRvIaqV1cRumvWSeHErTdjMREcCr1s53AUX5ZcSfpPqF9yr67NRjTrB7qYdrHygipuQ/exec';
 
+const KATEGORIEN = ['Business/Arbeit','Reise','Zu Hause','Doktor','Familie','Essen','Schule','Freizeit','Alltag','Sonstiges'];
+
 let faelligeAufgaben = [];
 let alleVokabeln = [];
 let vokabelIndex = 0;
@@ -9,10 +11,98 @@ let richtung = 0;
 let loesung = "";
 let todayDone = 0;
 let todayTotal = 0;
+let aktiveKategorie = null;
+
+function normalizeKategorie(value) {
+    const raw = (value || '').toString().trim();
+    if (!raw) return 'Sonstiges';
+    const lower = raw.toLowerCase();
+    const map = {
+        'business': 'Business/Arbeit',
+        'arbeit': 'Business/Arbeit',
+        'business/arbeit': 'Business/Arbeit',
+        'reise': 'Reise',
+        'zu hause': 'Zu Hause',
+        'doktor': 'Doktor',
+        'familie': 'Familie',
+        'essen': 'Essen',
+        'schule': 'Schule',
+        'freizeit': 'Freizeit',
+        'alltag': 'Alltag',
+        'sonstiges': 'Sonstiges'
+    };
+    return map[lower] || raw;
+}
+
+function buildKategorieOptions(selected = 'Sonstiges') {
+    return KATEGORIEN.map(k => `<option value="${k}" ${k === selected ? 'selected' : ''}>${k}</option>`).join('');
+}
+
+function fillKategorieSelects() {
+    const addSelect = document.getElementById('addKategorie');
+    const editSelect = document.getElementById('editKategorie');
+    if (addSelect) addSelect.innerHTML = buildKategorieOptions('Sonstiges');
+    if (editSelect) editSelect.innerHTML = buildKategorieOptions('Sonstiges');
+}
+
+function getKategorieCounts() {
+    const counts = Object.fromEntries(KATEGORIEN.map(k => [k, 0]));
+    alleVokabeln.forEach(vok => {
+        const kat = normalizeKategorie(vok['Kategorie']);
+        if (counts[kat] === undefined) counts[kat] = 0;
+        counts[kat] += 1;
+    });
+    return counts;
+}
+
+function renderKategorieGrid() {
+    const grid = document.getElementById('categoryGrid');
+    if (!grid) return;
+    const counts = getKategorieCounts();
+    grid.innerHTML = KATEGORIEN.map(k => `
+        <button class="category-tile" data-kategorie="${k}" type="button">
+            <div class="category-title">${k}</div>
+            <div class="category-count">${counts[k] || 0} Wörter</div>
+        </button>
+    `).join('');
+
+    grid.querySelectorAll('[data-kategorie]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            aktiveKategorie = btn.dataset.kategorie;
+            vokabeltrainerStarten();
+        });
+    });
+}
+
+function updateActiveCategoryLabel() {
+    const label = document.getElementById('activeCategoryLabel');
+    if (!label) return;
+    if (!aktiveKategorie) {
+        label.style.display = 'none';
+        label.textContent = '';
+        return;
+    }
+    label.style.display = 'block';
+    label.textContent = `Aktive Kategorie: ${aktiveKategorie}`;
+}
+
+function prepareLearningStart() {
+    const categorySelection = document.getElementById('categorySelection');
+    const loadingMsg = document.getElementById('loadingMsg');
+    const trainerApp = document.getElementById('trainerApp');
+    if (trainerApp) trainerApp.style.display = 'none';
+    if (loadingMsg) loadingMsg.style.display = 'none';
+    if (alleVokabeln.length === 0) {
+        if (loadingMsg) loadingMsg.style.display = 'block';
+        loadVocabulary(true);
+        return;
+    }
+    renderKategorieGrid();
+    updateActiveCategoryLabel();
+    if (categorySelection) categorySelection.style.display = 'block';
+}
 
 document.addEventListener('DOMContentLoaded', () => {
-    
-    // --- PWA INSTALLATION ---
     let deferredPrompt;
     const installBtn = document.getElementById('btnInstall');
 
@@ -42,7 +132,6 @@ document.addEventListener('DOMContentLoaded', () => {
         deferredPrompt = null;
     });
 
-    // --- NAVIGATION ---
     const viewMenu = document.getElementById('viewMenu');
     const viewLernen = document.getElementById('viewLernen');
     const viewFortschritt = document.getElementById('viewFortschritt');
@@ -58,12 +147,15 @@ document.addEventListener('DOMContentLoaded', () => {
         btnBackToMenu.style.display = view === viewMenu ? 'none' : 'block';
     }
 
-    btnBackToMenu.addEventListener('click', () => showView(viewMenu));
+    btnBackToMenu.addEventListener('click', () => {
+        aktiveKategorie = null;
+        updateActiveCategoryLabel();
+        showView(viewMenu);
+    });
 
     document.getElementById('btnStartLernen').addEventListener('click', () => {
         showView(viewLernen);
-        if (alleVokabeln.length === 0) loadVocabulary();
-        else vokabeltrainerStarten();
+        prepareLearningStart();
     });
 
     document.getElementById('btnLernfortschritt').addEventListener('click', () => {
@@ -78,7 +170,6 @@ document.addEventListener('DOMContentLoaded', () => {
         else renderWorterverzeichnis();
     });
 
-    // --- PULL TO REFRESH LOGIK ---
     let startY = 0;
     let ptrContainer = document.getElementById('ptr');
     let isPulling = false;
@@ -97,34 +188,29 @@ document.addEventListener('DOMContentLoaded', () => {
         let deltaY = y - startY;
 
         if (deltaY > 0 && window.scrollY === 0) {
-            if (e.cancelable) e.preventDefault(); 
-            let height = Math.min(deltaY * 0.4, 80); 
+            if (e.cancelable) e.preventDefault();
+            let height = Math.min(deltaY * 0.4, 80);
             ptrContainer.style.height = height + 'px';
-            
-            if (height > 50) {
-                ptrContainer.innerHTML = '🔄 Loslassen zum Aktualisieren';
-            } else {
-                ptrContainer.innerHTML = '⬇️ Zum Aktualisieren ziehen...';
-            }
+            ptrContainer.innerHTML = height > 50 ? '🔄 Loslassen zum Aktualisieren' : '⬇️ Zum Aktualisieren ziehen...';
         }
     }, { passive: false });
 
     window.addEventListener('touchend', () => {
         if (!isPulling) return;
         isPulling = false;
-        ptrContainer.style.transition = 'height 0.3s ease'; 
-        
+        ptrContainer.style.transition = 'height 0.3s ease';
         let currentHeight = parseInt(ptrContainer.style.height || '0');
-        
+
         if (currentHeight > 50) {
             ptrContainer.style.height = '50px';
             ptrContainer.innerHTML = '<div class="spinner" style="width:20px;height:20px;border-width:3px;margin:0 10px 0 0;"></div> Daten laden...';
-            
             loadVocabulary().then(() => {
                 if (document.getElementById('viewVerzeichnis').style.display === 'block') {
                     renderWorterverzeichnis();
                 } else if (document.getElementById('viewFortschritt').style.display === 'block') {
                     renderFortschrittChart();
+                } else if (document.getElementById('viewLernen').style.display === 'block') {
+                    prepareLearningStart();
                 }
                 setTimeout(() => { ptrContainer.style.height = '0px'; }, 500);
             });
@@ -133,7 +219,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // --- EVENT LISTENER LERNEN ---
     document.getElementById('btnCheck').addEventListener('click', function() {
         if (richtung === 0) {
             document.getElementById('modalLoesung').innerText = loesung;
@@ -154,7 +239,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 document.getElementById('feedback').style.color = 'var(--success)';
                 setTimeout(() => verarbeiteAntwort(true), 1000);
             } else {
-                document.getElementById('feedback').innerText = `Falsch! Richtig ist:\n${vok['Furigana'] ? vok['Furigana'] : ''}\n${loesung}`;
+                document.getElementById('feedback').innerText = `Falsch! Richtig ist:
+${vok['Furigana'] ? vok['Furigana'] : ''}
+${loesung}`;
                 document.getElementById('feedback').style.color = 'var(--danger)';
                 document.getElementById('translation').disabled = true;
                 this.innerText = 'Weiter';
@@ -188,11 +275,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // --- EVENT LISTENER WÖRTERVERZEICHNIS ---
     document.getElementById('btnSubmitWord').addEventListener('click', () => {
         let kanji = document.getElementById('addKanji').value.trim();
         let furigana = document.getElementById('addFurigana').value.trim();
         let deutsch = document.getElementById('addDeutsch').value.trim();
+        let kategorie = normalizeKategorie(document.getElementById('addKategorie').value);
 
         if (!deutsch || (!kanji && !furigana)) {
             document.getElementById('addFeedback').innerText = 'Bitte füllen Sie die Bedeutung und mindestens Kanji/Kana aus!';
@@ -208,13 +295,14 @@ document.addEventListener('DOMContentLoaded', () => {
             method: 'POST',
             mode: 'no-cors',
             headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-            body: JSON.stringify({ action: 'addWord', kanji: kanji, furigana: furigana, deutsch: deutsch })
+            body: JSON.stringify({ action: 'addWord', kanji, furigana, deutsch, kategorie })
         }).then(() => {
             document.getElementById('addFeedback').innerText = 'Erfolgreich hinzugefügt!';
             document.getElementById('addFeedback').style.color = 'var(--success)';
             document.getElementById('addKanji').value = '';
             document.getElementById('addFurigana').value = '';
             document.getElementById('addDeutsch').value = '';
+            document.getElementById('addKategorie').value = 'Sonstiges';
             setTimeout(() => {
                 document.getElementById('addFeedback').innerText = '';
                 loadVocabulary().then(renderWorterverzeichnis);
@@ -236,11 +324,12 @@ document.addEventListener('DOMContentLoaded', () => {
             rowIndex: rowIndex,
             kanji: document.getElementById('editKanji').value.trim(),
             furigana: document.getElementById('editFurigana').value.trim(),
-            deutsch: document.getElementById('editDeutsch').value.trim()
+            deutsch: document.getElementById('editDeutsch').value.trim(),
+            kategorie: normalizeKategorie(document.getElementById('editKategorie').value)
         };
-        
+
         document.getElementById('btnSaveEdit').innerText = 'Speichere...';
-        
+
         fetch(SCRIPT_URL, {
             method: 'POST',
             mode: 'no-cors',
@@ -253,9 +342,8 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // GLOBALE FUNKTIONEN FÜR INLINE-HTML
     window.deleteWord = function(rowIndex) {
-        if (!confirm("Wort wirklich dauerhaft löschen?")) return;
+        if (!confirm('Wort wirklich dauerhaft löschen?')) return;
         fetch(SCRIPT_URL, {
             method: 'POST',
             mode: 'no-cors',
@@ -271,38 +359,50 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('editKanji').value = vok['Kanji'] || '';
         document.getElementById('editFurigana').value = vok['Furigana'] || '';
         document.getElementById('editDeutsch').value = vok['Deutsch'] || '';
+        document.getElementById('editKategorie').innerHTML = buildKategorieOptions(normalizeKategorie(vok['Kategorie']));
         document.getElementById('modalEdit').style.display = 'block';
     };
 
-    // INIT
+    fillKategorieSelects();
     loadVocabulary();
 });
 
-// --- FUNKTIONEN ---
-async function loadVocabulary() {
+async function loadVocabulary(forLearning = false) {
     try {
-        document.getElementById('loadingMsg').style.display = 'block';
-        document.getElementById('trainerApp').style.display = 'none';
-        
+        const loadingMsg = document.getElementById('loadingMsg');
+        const trainerApp = document.getElementById('trainerApp');
+        const categorySelection = document.getElementById('categorySelection');
+        if (loadingMsg) loadingMsg.style.display = 'block';
+        if (trainerApp) trainerApp.style.display = 'none';
+        if (categorySelection) categorySelection.style.display = 'none';
+
         let response = await fetch(SCRIPT_URL, { method: 'GET' });
-        if (!response.ok) throw new Error("HTTP Fehler");
-        
+        if (!response.ok) throw new Error('HTTP Fehler');
+
         alleVokabeln = await response.json();
-        
-        if (document.getElementById('viewLernen').style.display === 'block') {
-            vokabeltrainerStarten();
+        alleVokabeln = alleVokabeln.map(vok => ({ ...vok, Kategorie: normalizeKategorie(vok['Kategorie']) }));
+        fillKategorieSelects();
+
+        if (forLearning || document.getElementById('viewLernen').style.display === 'block') {
+            renderKategorieGrid();
+            updateActiveCategoryLabel();
+            if (categorySelection) categorySelection.style.display = 'block';
+            if (loadingMsg) loadingMsg.style.display = 'none';
         }
     } catch (error) {
-        document.getElementById('loadingMsg').innerHTML = "Fehler beim Laden der Daten.";
+        document.getElementById('loadingMsg').innerHTML = 'Fehler beim Laden der Daten.';
     }
 }
 
 function updateDailyProgress() {
     const today = new Date().toISOString().split('T')[0];
-    let savedProgress = JSON.parse(localStorage.getItem('japTrainerProgress')) || { date: '', done: 0, total: 0 };
-    
-    if (savedProgress.date !== today) savedProgress = { date: today, done: 0, total: todayTotal };
-    
+    let savedProgress = JSON.parse(localStorage.getItem('japTrainerProgress')) || { date: '', done: 0, total: 0, kategorie: '' };
+    const categoryKey = aktiveKategorie || 'alle';
+
+    if (savedProgress.date !== today || savedProgress.kategorie !== categoryKey) {
+        savedProgress = { date: today, done: 0, total: todayTotal, kategorie: categoryKey };
+    }
+
     if (todayDone > savedProgress.done) {
         savedProgress.done = todayDone;
         savedProgress.total = todayTotal;
@@ -319,8 +419,9 @@ function updateDailyProgress() {
 
 function resetDailyProgress() {
     const today = new Date().toISOString().split('T')[0];
-    let savedProgress = JSON.parse(localStorage.getItem('japTrainerProgress')) || { date: '', done: 0 };
-    todayDone = (savedProgress.date === today) ? savedProgress.done : 0;
+    const categoryKey = aktiveKategorie || 'alle';
+    let savedProgress = JSON.parse(localStorage.getItem('japTrainerProgress')) || { date: '', done: 0, kategorie: '' };
+    todayDone = (savedProgress.date === today && savedProgress.kategorie === categoryKey) ? savedProgress.done : 0;
     updateDailyProgress();
 }
 
@@ -330,12 +431,14 @@ function vokabeltrainerStarten() {
     faelligeAufgaben = [];
 
     alleVokabeln.forEach(vok => {
+        if (aktiveKategorie && normalizeKategorie(vok['Kategorie']) !== aktiveKategorie) return;
+
         let letztesTrainingStr = vok['Datum des letzten Trainings'] || vok['Letztes Training'];
         if (letztesTrainingStr) {
             if (new Date(letztesTrainingStr) < heute) {
-                vok['Status JA-->DE'] = "";
-                vok['Status DE-->JA'] = "";
-                vok['Datum des letzten Trainings'] = "";
+                vok['Status JA-->DE'] = '';
+                vok['Status DE-->JA'] = '';
+                vok['Datum des letzten Trainings'] = '';
             }
         }
         let abfrageDatumStr = vok['Naechste Abfrage'];
@@ -354,8 +457,13 @@ function vokabeltrainerStarten() {
     todayTotal = faelligeAufgaben.length + todayDone;
     resetDailyProgress();
 
+    document.getElementById('categorySelection').style.display = 'none';
+    updateActiveCategoryLabel();
+
     if (faelligeAufgaben.length === 0) {
-        document.getElementById('loadingMsg').innerHTML = "<b>Super!</b><br>Du hast für heute alles gelernt.";
+        document.getElementById('trainerApp').style.display = 'none';
+        document.getElementById('loadingMsg').style.display = 'block';
+        document.getElementById('loadingMsg').innerHTML = `<b>Keine fälligen Wörter</b><br>In der Kategorie ${aktiveKategorie} ist heute nichts offen.`;
         return;
     }
 
@@ -374,7 +482,7 @@ function naechsteVokabel() {
     if (vokabelIndex >= faelligeAufgaben.length) {
         document.getElementById('trainerApp').style.display = 'none';
         document.getElementById('loadingMsg').style.display = 'block';
-        document.getElementById('loadingMsg').innerHTML = "<b>Fertig!</b><br>Alle fälligen Aufgaben gelernt!";
+        document.getElementById('loadingMsg').innerHTML = `<b>Fertig!</b><br>Alle fälligen Aufgaben in ${aktiveKategorie} gelernt!`;
         return;
     }
 
@@ -427,13 +535,13 @@ function verarbeiteAntwort(warRichtig) {
 
     if ((stat0 === 1 || stat0 === 3) && (stat1 === 1 || stat1 === 3)) {
         let fach = parseInt(vok['Fach']) || 1;
-        if (stat0 === 1 && stat1 === 1) { if (fach < 5) fach++; } 
+        if (stat0 === 1 && stat1 === 1) { if (fach < 5) fach++; }
         else { if (fach > 1) fach--; }
-        
+
         let tage = [0, 1, 3, 7, 14, 30][fach];
         let neuesDatum = new Date();
         neuesDatum.setDate(neuesDatum.getDate() + tage);
-        
+
         updates.fach = fach;
         updates.naechsteAbfrage = neuesDatum.toISOString().split('T')[0];
         updates.statusJA = '';
@@ -454,16 +562,16 @@ function verarbeiteAntwort(warRichtig) {
 
 function renderFortschrittChart() {
     const chartContainer = document.getElementById('chartContainer');
-    chartContainer.innerHTML = ''; 
+    chartContainer.innerHTML = '';
     let levelCounts = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
-    
+
     alleVokabeln.forEach(vok => {
         let fach = parseInt(vok['Fach']) || 1;
         if (levelCounts[fach] !== undefined) levelCounts[fach]++;
     });
-    
+
     const maxCount = Math.max(...Object.values(levelCounts), 1);
-    
+
     for (let i = 1; i <= 5; i++) {
         let count = levelCounts[i];
         let heightPercent = (count / maxCount) * 100;
@@ -481,10 +589,10 @@ function renderFortschrittChart() {
 function renderWorterverzeichnis() {
     const container = document.getElementById('worterListe');
     const loadingSpinner = document.getElementById('loadingVerzeichnis');
-    
+
     container.style.display = 'none';
-    if(loadingSpinner) loadingSpinner.style.display = 'block';
-    container.innerHTML = ''; 
+    if (loadingSpinner) loadingSpinner.style.display = 'block';
+    container.innerHTML = '';
 
     setTimeout(() => {
         [...alleVokabeln].reverse().forEach(vok => {
@@ -493,9 +601,10 @@ function renderWorterverzeichnis() {
             div.style.margin = '10px 0';
             div.innerHTML = `
                 <div style="font-size: 18px; font-weight: bold; margin-bottom: 5px;">${vok['Deutsch'] || '-'}</div>
-                <div style="color: var(--text-muted); margin-bottom: 15px; font-size: 14px;">
+                <div style="color: var(--text-muted); margin-bottom: 8px; font-size: 14px;">
                     Kanji: ${vok['Kanji'] || '-'} | Kana: ${vok['Furigana'] || '-'}
                 </div>
+                <div style="color: var(--text-muted); margin-bottom: 15px; font-size: 14px;">Kategorie: ${normalizeKategorie(vok['Kategorie'])}</div>
                 <div style="display: flex; gap: 10px;">
                     <button onclick="openEditModal(${vok.rowIndex})" class="btn-secondary" style="margin: 0; padding: 10px;">✏️ Ändern</button>
                     <button onclick="deleteWord(${vok.rowIndex})" class="btn-secondary" style="margin: 0; padding: 10px; background: #FEE2E2; color: var(--danger);">🗑️ Löschen</button>
@@ -504,7 +613,7 @@ function renderWorterverzeichnis() {
             container.appendChild(div);
         });
 
-        if(loadingSpinner) loadingSpinner.style.display = 'none';
+        if (loadingSpinner) loadingSpinner.style.display = 'none';
         container.style.display = 'block';
     }, 50);
 }

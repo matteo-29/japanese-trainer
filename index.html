@@ -51,6 +51,15 @@
         .daily-progress-top { display: flex; justify-content: space-between; align-items: center; font-size: 14px; font-weight: 600; color: #374151; margin-bottom: 8px; }
         .daily-progress-bar { background-color: #E5E7EB; border-radius: 9999px; height: 10px; width: 100%; overflow: hidden; }
         .daily-progress-fill { background-color: var(--primary); height: 100%; border-radius: 9999px; width: 0%; transition: width 0.3s ease; }
+        select { width: 100%; padding: 12px; margin-bottom: 10px; border: 1px solid #D1D5DB; border-radius: 8px; box-sizing: border-box; font-size: 16px; background: #F9FAFB; color: var(--text-main); }
+        select:focus { outline: none; border-color: var(--primary); }
+        .category-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 18px; }
+        .category-tile { background: var(--surface); border: 1px solid #E5E7EB; border-radius: 12px; padding: 16px; text-align: left; box-shadow: 0 4px 6px rgba(0,0,0,0.04); min-height: 96px; }
+        .category-tile:hover { border-color: var(--primary); }
+        .category-title { font-weight: 700; font-size: 16px; margin-bottom: 6px; }
+        .category-count { font-size: 13px; color: var(--text-muted); }
+        .category-active { margin: 0 15px 10px; font-size: 14px; color: var(--text-muted); }
+        @media (min-width: 768px) { .category-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
     </style>
 </head>
 <body>
@@ -121,6 +130,7 @@
         <input type="text" id="addKanji" placeholder="Kanji (optional)">
         <input type="text" id="addFurigana" placeholder="Kana (optional)">
         <input type="text" id="addDeutsch" placeholder="Bedeutung (Pflicht)">
+        <select id="addKategorie"></select>
         <p id="addFeedback" style="font-weight: bold; min-height: 20px; font-size: 14px;"></p>
         <button class="btn-primary" id="btnSubmitWord">Zur Liste hinzufügen</button>
     </div>
@@ -157,6 +167,7 @@
         <input type="text" id="editKanji" placeholder="Kanji">
         <input type="text" id="editFurigana" placeholder="Kana">
         <input type="text" id="editDeutsch" placeholder="Bedeutung">
+        <select id="editKategorie"></select>
         <div style="display: flex; gap: 10px; margin-top: 15px;">
             <button class="btn-primary" id="btnSaveEdit" style="flex: 1;">Speichern</button>
             <button class="btn-secondary" id="btnCancelEdit" style="flex: 1;">Abbrechen</button>
